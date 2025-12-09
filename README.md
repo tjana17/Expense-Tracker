@@ -104,3 +104,5 @@ Pull requests and suggestions are welcome!
 ## ⭐ Support the Project
 
 If you found this useful, please star ⭐ the repository.
+
+Note: The app is still in progress. Kindly wait for the complete product 🙏.
