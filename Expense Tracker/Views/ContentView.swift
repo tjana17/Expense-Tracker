@@ -11,19 +11,32 @@ import Foundation
 struct ContentView: View {
     @State private var showHomeView: Bool = false
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-            Button("Get Started") {
-                showHomeView = true
+        NavigationStack {
+            ZStack {
+                Image("get-started")
+                    .resizable()
+                    .scaledToFill()
+                    .ignoresSafeArea()
+                
+                VStack {
+                    Spacer()
+                    
+                    Button {
+                        debugPrint("Tapped..")
+                        showHomeView = true
+                    } label: {
+                        Text("")
+                            .frame(maxWidth: .infinity, minHeight: 60)
+                            .background(Color.clear)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 20)
+                }
             }
-        }
-        .padding()
-        .navigationTitle("Welcome")
-        .fullScreenCover(isPresented: $showHomeView) {
-            ExpenseHomeView()
+            .fullScreenCover(isPresented: $showHomeView) {
+                ExpenseHomeView()
+            }
+            
         }
     }
 }
@@ -52,33 +65,3 @@ struct AnimatedGradientBackground: View {
         .edgesIgnoringSafeArea(.all)
     }
 }
-
-
-
-//struct ExpenseAPIService {
-//    static let shared = ExpenseAPIService()
-//
-//    func fetchDashboardData() async throws -> DashboardData {
-//        let url = URL(string: "https://api.myexpensesapp.com/dashboard")!
-//        let (data, _) = try await URLSession.shared.data(from: url)
-//        return try JSONDecoder().decode(DashboardData.self, from: data)
-//    }
-//}
-//
-//struct DashboardData: Codable {
-//    let balance: Double
-//    let expense: Double
-//    let income: Double
-//    let insight: String
-//    let transactions: [TransactionItem]
-//    let chartPoints: [Double]
-//}
-
-//struct TransactionItem: Codable, Identifiable {
-//    let id: UUID
-//    let title: String
-//    let categoryIcon: String
-//    let date: String
-//    let amount: Double
-//    let isPositive: Bool
-//}
