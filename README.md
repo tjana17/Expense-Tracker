@@ -1,8 +1,8 @@
 # 📊 Expense Tracker — iOS (SwiftUI + Firebase)
 
-<!-- <p align="center">
-  <img src="assets/github-banner.png" alt="Expense Tracker Banner" width="100%" />
-</p> -->
+ <p align="center">
+  <img src="https://github.com/tjana17/Expense-Tracker/blob/main/screens/expense_tracker_banner.png" alt="Expense Tracker Banner" width="100%" />
+</p> 
 
 A clean, modern, and intuitive **Expense Tracker App** built using **SwiftUI**, powered by **Firebase Authentication**, **Firestore Database**, and **Firebase Storage**.
 
