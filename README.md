@@ -76,20 +76,20 @@ Track daily spending, visualize financial habits, and securely sync data across 
 
 ### 1️⃣ Clone Repository
 ```bash
-git clone https://github.com/yourusername/ExpenseTracker.git
+git clone https://github.com/tjana17/Expense-Tracker.git
 
 ```
 ### 2️⃣ Open in Xcode
 Requires Xcode 15+.
 ### 3️⃣ Add Firebase
-Create a Firebase project
-Enable: Auth, Firestore, Storage
-Download GoogleService-Info.plist
+Create a Firebase project<br/>
+Enable: Auth, Firestore, Storage<br/>
+Download GoogleService-Info.plist<br/>
 Add it to the Xcode project
 ### 4️⃣ Install Swift Packages
-FirebaseAuth
-FirebaseFirestore
-FirebaseStorage
+FirebaseAuth<br/>
+FirebaseFirestore<br/>
+FirebaseStorage<br/>
 ### 5️⃣ Run the app
 Cmd + R
 
