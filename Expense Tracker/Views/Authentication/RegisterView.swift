@@ -8,10 +8,6 @@
 import SwiftUI
 import Combine
 
-// If you have Firebase installed, uncomment the imports below and ensure FirebaseApp.configure() is called in your App.
-// import FirebaseAuth
-// import FirebaseFirestore
-
 struct RegisterView: View {
     
     @StateObject private var vm = RegisterViewModel()
@@ -93,6 +89,11 @@ struct RegisterView: View {
                                 .background(adaptiveFieldBackground)
                                 .foregroundColor(.white)
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .onChange(of: vm.mobile) { _, newValue in
+                                    if newValue.count > 10 {
+                                        vm.mobile = String(newValue.prefix(10))
+                                    }
+                                }
                         }
                     }
                     if vm.showValidation, let e = vm.mobileError { fieldError(e) }
@@ -113,7 +114,7 @@ struct RegisterView: View {
                                         Text(c.name)
                                         Spacer()
                                         Text(c.currencyName)
-                                            .foregroundColor(.secondary)
+                                            .foregroundColor(.white)
                                     }
                                 }
                             }
@@ -200,7 +201,11 @@ struct RegisterView: View {
             }
             .padding()
         }
-        .background(Color.black)
+        .background(Color.black.ignoresSafeArea())
+        .contentShape(Rectangle())
+        .onTapGesture {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
         .navigationTitle("Register")
         .toolbarTitleDisplayMode(.inline)
         .tint(.white)
@@ -269,3 +274,4 @@ struct RegisterView: View {
             .preferredColorScheme(.dark)
     }
 }
+

@@ -34,7 +34,8 @@ struct ContentView: View {
                 }
             }
             .fullScreenCover(isPresented: $showHomeView) {
-                ExpenseHomeView()
+//                ExpenseHomeView()
+                LoginView()
             }
             
         }
