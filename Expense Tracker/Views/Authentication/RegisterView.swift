@@ -81,7 +81,8 @@ struct RegisterView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                             }
                             
-                            TextField("Mobile Number", text: $vm.mobile)
+                            // Formatted mobile TextField (e.g., 123-456-7890)
+                            TextField("Mobile Number", text: formattedMobileBinding)
                                 .keyboardType(.numberPad)
                                 .textContentType(.telephoneNumber)
                                 .padding(.horizontal, 12)
@@ -90,8 +91,9 @@ struct RegisterView: View {
                                 .foregroundColor(.white)
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                                 .onChange(of: vm.mobile) { _, newValue in
-                                    if newValue.count > 10 {
-                                        vm.mobile = String(newValue.prefix(10))
+                                    // still clamp raw digits to a practical length (e.g., 12)
+                                    if newValue.count > 12 {
+                                        vm.mobile = String(newValue.prefix(12))
                                     }
                                 }
                         }
@@ -268,10 +270,49 @@ struct RegisterView: View {
     }
 }
 
+// MARK: - Mobile formatting binding
+private extension RegisterView {
+    // Proxy binding that formats vm.mobile (digits-only) as XXX-XXX-XXXX for display
+    var formattedMobileBinding: Binding<String> {
+        Binding<String>(
+            get: {
+                formatPhone(vm.mobile)
+            },
+            set: { newValue in
+                // Strip non-digits from user input
+                let digits = newValue.filter { $0.isNumber }
+                // Optionally clamp to 10 digits for US-style formatting; or allow more (e.g., 12)
+                let clamped = String(digits.prefix(12))
+                vm.mobile = clamped
+            }
+        )
+    }
+    
+    func formatPhone(_ digits: String) -> String {
+        let d = digits.filter { $0.isNumber }
+        let count = d.count
+        if count == 0 { return "" }
+        let chars = Array(d)
+        
+        // Format as XXX-XXX-XXXX (US-style) progressively
+        if count <= 3 {
+            return String(chars[0..<count])
+        } else if count <= 6 {
+            let part1 = String(chars[0..<3])
+            let part2 = String(chars[3..<count])
+            return "\(part1)-\(part2)"
+        } else {
+            let part1 = String(chars[0..<3])
+            let part2 = String(chars[3..<6])
+            let part3 = String(chars[6..<min(10, count)])
+            return "\(part1)-\(part2)-\(part3)"
+        }
+    }
+}
+
 #Preview {
     NavigationStack {
         RegisterView()
             .preferredColorScheme(.dark)
     }
 }
-
