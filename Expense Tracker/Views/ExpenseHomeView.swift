@@ -10,6 +10,8 @@ import SwiftUI
 struct ExpenseHomeView: View {
 
     @State private var selectedTab: Int = 0
+    // Use shared AuthViewModel from environment
+    @EnvironmentObject private var authVM: AuthViewModel
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -26,7 +28,7 @@ struct ExpenseHomeView: View {
                 ExpenseChartView()
                     .tag(2)
                 
-                RegisterView()
+                homeView
                     .tag(3)
             }
             .tabViewStyle(.page(indexDisplayMode: .never)) // Hides default tab bar
@@ -103,7 +105,9 @@ extension ExpenseHomeView {
     }
 
     private func iconButton(system: String) -> some View {
-        Button(action: {}) {
+        Button(action: {
+            authVM.signOut()
+        }) {
             Image(systemName: system)
                 .foregroundColor(.white)
                 .padding(12)

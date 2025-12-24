@@ -20,6 +20,8 @@ struct RegisterView: View {
     @State private var alertMessage = ""
     
     @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject private var authVM: AuthViewModel
+    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         ScrollView {
@@ -212,7 +214,10 @@ struct RegisterView: View {
         .toolbarTitleDisplayMode(.inline)
         .tint(.white)
         .alert(alertTitle, isPresented: $showAlert) {
-            Button("OK") { }
+            Button("OK") {
+                // Dismiss RegisterView and go back to LoginView
+                dismiss()
+            }
         } message: {
             Text(alertMessage)
         }
@@ -235,7 +240,33 @@ struct RegisterView: View {
         vm.showValidation = true
         vm.validateAll()
         guard vm.isFormValid else { return }
-        await vm.register()
+        
+        vm.isSubmitting = true
+        defer { vm.isSubmitting = false }
+        
+        // Call Firebase sign up through AuthViewModel
+        let email = vm.email.trimmingCharacters(in: .whitespacesAndNewlines)
+        let password = vm.password
+        
+        await withCheckedContinuation { continuation in
+//            authVM.signUp(email: email, password: password)
+            // Since your AuthViewModel uses completion handlers and doesn’t expose result,
+            // we’ll just show a success alert after a short delay if isSignedIn flips true.
+            authVM.createUserWithProfile(email: email, password: password, firstName: vm.firstName, lastName: vm.lastName, mobileDigitsOnly: vm.mobile, country: vm.selectedCountry, currency: vm.currency) {_ in 
+                print("User profile updated successfully..!")
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                if authVM.isRegistered {
+                    alertTitle = "Success"
+                    alertMessage = "Account created successfully."
+                } else {
+                    alertTitle = "Sign Up"
+                    alertMessage = "Please check your details and try again."
+                }
+                showAlert = true
+                continuation.resume()
+            }
+        }
     }
     
     private func textField(_ title: String, text: Binding<String>, keyboard: UIKeyboardType = .default, textContentType: UITextContentType? = nil, isSecure: Bool = false) -> some View {

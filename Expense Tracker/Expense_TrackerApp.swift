@@ -20,12 +20,15 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 struct Expense_TrackerApp: App {
     // register app delegate for Firebase setup
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    @StateObject private var authVM = AuthViewModel()
+
     var body: some Scene {
         WindowGroup {
             NavigationStack {
                 ContentView()
                     .preferredColorScheme(.dark)
             }
+            .environmentObject(authVM)
         }
     }
 }
