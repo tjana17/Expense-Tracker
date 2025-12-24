@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct LoginView: View {
+    // MARK: - Init
     @State private var email = ""
     @State private var password = ""
     @State private var isRegisterActive = false
@@ -34,10 +35,10 @@ struct LoginView: View {
         return value.range(of: pattern, options: .regularExpression) != nil
     }
 
+    // MARK: - View
     var body: some View {
         NavigationStack {
             if authVM.isSignedIn {
-                // You can replace this with your main app view
                 ExpenseHomeView()
             } else {
                 VStack(spacing: 24) {
@@ -192,21 +193,7 @@ struct LoginView: View {
                         email: $forgotEmail,
                         error: $forgotError,
                         onSubmit: {
-                            // Validate email and simulate submission
-                            let trimmed = forgotEmail.trimmingCharacters(in: .whitespacesAndNewlines)
-                            guard !trimmed.isEmpty else {
-                                forgotError = "Email is required"
-                                return
-                            }
-                            guard isValidEmail(trimmed) else {
-                                forgotError = "Please enter a valid email address"
-                                return
-                            }
-                            // Simulate request and dismiss
-                            forgotError = nil
-                            isForgotPasswordActive = false
-                            alertMessage = "Password reset link sent to \(trimmed)"
-                            showAlert = true
+                            forgotPassword()
                         }
                     )
                     .presentationDetents([.height(260), .medium])
@@ -215,6 +202,24 @@ struct LoginView: View {
                 }
             }
         }
+    }
+    
+    func forgotPassword() {
+        // Validate email and simulate submission
+        let trimmed = forgotEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            forgotError = "Email is required"
+            return
+        }
+        guard isValidEmail(trimmed) else {
+            forgotError = "Please enter a valid email address"
+            return
+        }
+        // Simulate request and dismiss
+        forgotError = nil
+        isForgotPasswordActive = false
+        alertMessage = "Password reset link sent to \(trimmed)"
+        showAlert = true
     }
 }
 

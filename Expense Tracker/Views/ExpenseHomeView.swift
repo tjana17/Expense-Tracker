@@ -28,7 +28,7 @@ struct ExpenseHomeView: View {
                 ExpenseChartView()
                     .tag(2)
                 
-                homeView
+                ProfileView()
                     .tag(3)
             }
             .tabViewStyle(.page(indexDisplayMode: .never)) // Hides default tab bar
