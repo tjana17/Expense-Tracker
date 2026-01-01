@@ -11,6 +11,7 @@ import FirebaseAuth
 struct ProfileView: View {
     // Expect to use shared AuthViewModel for user and sign out
     @EnvironmentObject private var authVM: AuthViewModel
+    @State private var showAddCategorySheet = false
 
     var body: some View {
         ScrollView {
@@ -25,6 +26,10 @@ struct ProfileView: View {
                     infoRow(title: "Email", value: email)
                     mobileRow
                     infoRow(title: "Currency", value: currencyDisplay)
+                    categoryRow("Add Category")
+                        .onTapGesture {
+                            showAddCategorySheet = true
+                        }
                 }
                 .padding()
                 .background(Color.white.opacity(0.06))
@@ -51,6 +56,11 @@ struct ProfileView: View {
         .background(Color.black.ignoresSafeArea())
         .navigationTitle("Profile")
         .toolbarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showAddCategorySheet) {
+            AddCategorySheet()
+                .presentationDetents([.medium, .large])
+                .presentationCornerRadius(16)
+        }
     }
 
     // MARK: - Profile values
@@ -148,6 +158,20 @@ struct ProfileView: View {
                 .foregroundColor(.white)
                 .lineLimit(1)
                 .truncationMode(.tail)
+        }
+        .padding()
+        .background(Color.white.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+    
+    private func categoryRow(_ title: String) -> some View {
+        HStack {
+            Text(title)
+                .foregroundStyle(.white.opacity(0.7))
+            Spacer()
+            Image(systemName: "chevron.right")
+                .foregroundColor(.white)
+                .fontWeight(.bold)
         }
         .padding()
         .background(Color.white.opacity(0.06))
