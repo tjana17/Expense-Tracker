@@ -6,16 +6,21 @@
 //
 
 import SwiftUI
+import FirebaseAuth
 
 struct AddCategorySheet: View {
     // If you later promote this VM to EnvironmentObject, replace with @EnvironmentObject
     @StateObject private var vm = CategoriesViewModel()
 
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var authVM: AuthViewModel
 
     @State private var name: String = ""
     @State private var selectedIcon: String = "folder"
     @State private var searchText: String = ""
+
+    @State private var isSaving: Bool = false
+    @State private var saveError: String?
 
     private var nameError: String? {
         if name.isEmpty { return nil } // don’t show until user types
@@ -114,22 +119,32 @@ struct AddCategorySheet: View {
             }
             .frame(maxHeight: 260)
 
+            if let saveError {
+                Text(saveError)
+                    .font(.caption)
+                    .foregroundColor(.red)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
             // Save button
             Button {
-                let saved = vm.addCategory(name: name, iconName: selectedIcon)
-                if saved {
-                    dismiss()
-                }
+                Task { await saveCategory() }
             } label: {
-                Text("Save")
-                    .bold()
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(saveEnabled ? Color.blue : Color.gray.opacity(0.5))
-                    .foregroundColor(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                HStack {
+                    if isSaving {
+                        ProgressView()
+                            .tint(.white)
+                    }
+                    Text("Save")
+                        .bold()
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(saveEnabled ? Color.blue : Color.gray.opacity(0.5))
+                .foregroundColor(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
             }
-            .disabled(!saveEnabled)
+            .disabled(!saveEnabled || isSaving)
         }
         .padding()
         .background(Color.black)
@@ -137,11 +152,31 @@ struct AddCategorySheet: View {
     }
 
     private var saveEnabled: Bool {
-        vm.isValidName(name) && !selectedIcon.isEmpty
+        vm.isValidName(name) && !selectedIcon.isEmpty && authVM.user?.uid != nil
+    }
+
+    private func saveCategory() async {
+        guard let uid = authVM.user?.uid else {
+            saveError = "You must be signed in to save a category."
+            return
+        }
+        saveError = nil
+        isSaving = true
+        defer { isSaving = false }
+
+        do {
+            // Firestore write
+            _ = try await vm.saveCategoryToFirestore(userId: uid, name: name, iconName: selectedIcon)
+            // Also keep local behavior (optional): already appended in VM after save.
+            dismiss()
+        } catch {
+            saveError = error.localizedDescription
+        }
     }
 }
 
 #Preview {
     AddCategorySheet()
         .preferredColorScheme(.dark)
+        .environmentObject(AuthViewModel())
 }
