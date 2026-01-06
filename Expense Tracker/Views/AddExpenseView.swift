@@ -7,6 +7,7 @@
 
 import SwiftUI
 import FirebaseAuth
+import FirebaseFirestore
 
 struct AddExpenseView: View {
     // ViewModel for categories
@@ -19,6 +20,29 @@ struct AddExpenseView: View {
     @State private var amountText: String = ""
     @State private var selectedDate: Date = Date()
     @State private var showDatePicker: Bool = false
+
+    // Confirmation sheet
+    @State private var showConfirmSheet: Bool = false
+
+    // Payment Type enum and selection
+    private enum PaymentType: String, CaseIterable, Identifiable {
+        case cash = "Cash"
+        case card = "Card"
+        case online = "Online"
+        case upi = "UPI"
+
+        var id: String { rawValue }
+
+        var iconName: String {
+            switch self {
+            case .cash: return "banknote"
+            case .card: return "creditcard"
+            case .online: return "arrow.left.arrow.right.circle"
+            case .upi: return "qrcode.viewfinder"
+            }
+        }
+    }
+    @State private var selectedPaymentType: PaymentType = .cash
 
     private var formattedDate: String {
         let f = DateFormatter()
@@ -53,6 +77,12 @@ struct AddExpenseView: View {
                     .foregroundColor(.white)
 
                 amountField
+                
+                Text("Payment Type")
+                    .font(.system(size: 20).weight(.bold))
+                    .foregroundColor(.white)
+                
+                paymentTypeMenu
 
                 // Date Field
                 Text("Date")
@@ -61,9 +91,9 @@ struct AddExpenseView: View {
 
                 datePicker
 
-                // Save Expense (moved here, right after the date field)
+                // Save Expense triggers confirmation sheet first
                 Button {
-                    saveExpense()
+                    showConfirmSheet = true
                 } label: {
                     Text("Save Expense")
                         .bold()
@@ -83,6 +113,11 @@ struct AddExpenseView: View {
             .navigationTitle("Add Expense")
         }
         .background(.black)
+        .sheet(isPresented: $showConfirmSheet) {
+            confirmationSheet
+                .presentationDetents([.height(320), .medium])
+                .presentationCornerRadius(16)
+        }
     }
     
     // MARK: - Category Dropdown
@@ -121,19 +156,52 @@ struct AddExpenseView: View {
             .frame(height: 60)
             .background(Color(.secondarySystemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 10))
-        }
-        .task {
-            // Fetch categories when the view appears and user is available
-            if let uid = authVM.user?.uid {
-                do {
-                    try await categoriesVM.fetchCategoriesForUser(userId: uid)
-                    if selectedCategory == nil {
-                        selectedCategory = categoriesVM.categories.first
+            .onAppear {
+                // Fetch categories when the label first appears
+                guard let uid = authVM.user?.uid else { return }
+                Task {
+                    do {
+                        try await categoriesVM.fetchCategoriesForUser(userId: uid)
+                        if selectedCategory == nil {
+                            selectedCategory = categoriesVM.categories.first
+                        }
+                    } catch {
+                        print("Failed to fetch categories: \(error.localizedDescription)")
                     }
-                } catch {
-                    print("Failed to fetch categories: \(error.localizedDescription)")
                 }
             }
+        }
+    }
+
+    // MARK: - Payment Type Dropdown
+    private var paymentTypeMenu: some View {
+        Menu {
+            ForEach(PaymentType.allCases) { type in
+                Button {
+                    selectedPaymentType = type
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: type.iconName)
+                        Text(type.rawValue)
+                            .font(.system(size: 20).bold())
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: selectedPaymentType.iconName)
+                    .foregroundColor(.primary)
+                Text(selectedPaymentType.rawValue)
+                    .font(.system(size: 20).bold())
+                    .foregroundColor(.primary)
+                Spacer()
+                Image(systemName: "chevron.down")
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 12)
+            .frame(height: 60)
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
         }
     }
     
@@ -229,18 +297,161 @@ struct AddExpenseView: View {
         }
     }
 
+    // MARK: - Confirmation Sheet
+    private var confirmationSheet: some View {
+        VStack(spacing: 16) {
+            Capsule()
+                .fill(Color.secondary.opacity(0.4))
+                .frame(width: 44, height: 5)
+                .padding(.top, 8)
+
+            Text("Confirm Expense")
+                .font(.headline)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            VStack(spacing: 12) {
+                confirmItem(
+                    icon: selectedCategory?.iconName ?? "folder",
+                    title: "Category",
+                    value: {
+                        Text(selectedCategory?.name ?? "—")
+                            .foregroundColor(.white)
+                            .font(.body.bold())
+                    }
+                )
+
+                confirmItem(
+                    icon: "dollarsign.circle",
+                    title: "Amount",
+                    value: {
+                        Text(formattedAmount(amountText))
+                            .foregroundColor(.white)
+                            .font(.body.bold())
+                    }
+                )
+
+                confirmItem(
+                    icon: selectedPaymentType.iconName,
+                    title: "Payment Type",
+                    value: {
+                        Text(selectedPaymentType.rawValue)
+                            .foregroundColor(.white)
+                            .font(.body.bold())
+                    }
+                )
+
+                confirmItem(
+                    icon: "calendar",
+                    title: "Date",
+                    value: {
+                        Text(formattedDate)
+                            .foregroundColor(.white)
+                            .font(.body.bold())
+                    }
+                )
+            }
+            .padding(12)
+            .background(Color.white.opacity(0.06))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            HStack(spacing: 12) {
+                Button {
+                    showConfirmSheet = false
+                } label: {
+                    Text("Cancel")
+                        .bold()
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color.gray.opacity(0.25))
+                        .foregroundColor(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+
+                Button {
+                    showConfirmSheet = false
+                    saveExpense()
+                } label: {
+                    Text("Confirm")
+                        .bold()
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .disabled(!canSave)
+            }
+        }
+        .padding()
+        .background(Color.black)
+    }
+
+    // Generic confirm item builder
+    @ViewBuilder
+    private func confirmItem<Content: View>(icon: String, title: String, @ViewBuilder value: () -> Content) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Image(systemName: icon)
+                .foregroundColor(.white.opacity(0.8))
+            LabeledContent(title) {
+                value()
+            }
+            .foregroundStyle(.white.opacity(0.7))
+            Spacer()
+        }
+        .padding(10)
+        .background(Color.white.opacity(0.04))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func formattedAmount(_ text: String) -> String {
+        if let value = Double(text.replacingOccurrences(of: ",", with: ".")) {
+            let nf = NumberFormatter()
+            nf.numberStyle = .currency
+            nf.currencySymbol = "$"
+            return nf.string(from: NSNumber(value: value)) ?? "$\(value)"
+        }
+        return "$0.00"
+    }
+
     // MARK: - Actions
     private func saveExpense() {
-        // Implement your save logic here:
-        // - Validate fields (already covered by canSave)
-        // - Parse amount
-        // - Build expense payload
-        // - Write to Firestore if needed
-        // - Dismiss or show confirmation
-
+        guard let uid = authVM.user?.uid else {
+            print("No authenticated user.")
+            return
+        }
         guard let category = selectedCategory else { return }
-        let amount = Double(amountText.replacingOccurrences(of: ",", with: ".")) ?? 0
-        print("Saving expense with category: \(category.name), icon: \(category.iconName), amount: \(amount), date: \(selectedDate)")
+        guard let amount = Double(amountText.replacingOccurrences(of: ",", with: ".")), amount > 0 else {
+            print("Invalid amount")
+            return
+        }
+
+        let db = Firestore.firestore()
+        let docRef = db.collection("expenses").document() // auto-ID
+
+        // Build payload (convert UUID to String for Firestore)
+        let data: [String: Any] = [
+            "id": docRef.documentID,
+            "userId": uid,
+            "categoryId": category.id.uuidString,
+            "categoryName": category.name,
+            "categoryIcon": category.iconName,
+            "amount": amount,
+            "paymentType": selectedPaymentType.rawValue,
+            "date": Timestamp(date: selectedDate),
+            "createdAt": FieldValue.serverTimestamp()
+        ]
+
+        docRef.setData(data) { error in
+            if let error = error {
+                print("Failed to save expense: \(error.localizedDescription)")
+            } else {
+                print("Expense saved.")
+                // Optionally reset fields
+                amountText = ""
+                selectedDate = Date()
+                selectedPaymentType = .cash
+            }
+        }
     }
 }
 
@@ -248,4 +459,3 @@ struct AddExpenseView: View {
     AddExpenseView()
         .environmentObject(AuthViewModel())
 }
-
