@@ -22,7 +22,7 @@ struct ExpenseHomeView: View {
                 ExpenseChartView()
                     .tag(1)
                 
-                homeView
+                AddExpenseView()
                     .tag(10)
                 
                 ExpenseChartView()

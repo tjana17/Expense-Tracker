@@ -72,4 +72,27 @@ final class CategoriesViewModel: ObservableObject {
 
         return categoryId
     }
+
+    // Firestore: fetch all categories for a given userId from "category" collection
+    func fetchCategoriesForUser(userId: String) async throws {
+        let snapshot = try await db.collection("category")
+            .whereField("userId", isEqualTo: userId)
+            .getDocuments()
+
+        let mapped: [Category] = snapshot.documents.compactMap { doc in
+            let data = doc.data()
+            guard
+                let idString = data["id"] as? String,
+                let name = data["name"] as? String,
+                let iconName = data["iconName"] as? String
+            else {
+                return nil
+            }
+            let uuid = UUID(uuidString: idString) ?? UUID()
+            return Category(id: uuid, name: name, iconName: iconName)
+        }
+        // Sort alphabetically for nicer UX (optional)
+        self.categories = mapped.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
 }
+
