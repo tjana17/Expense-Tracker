@@ -25,3 +25,17 @@ enum PaymentType: String, CaseIterable, Identifiable {
         }
     }
 }
+
+// Currency Symbol for selected currency
+enum Currency {
+    static func symbol(from code: String) -> String {
+        switch code {
+        case "USD - US Dollar": return "$"
+        case "EUR - Euro": return "€"
+        case "GBP - Pound Sterling": return "£"
+        case "JPY - Japanese Yen": return "¥"
+        case "INR - Indian Rupee": return "₹"
+        default: return "$"
+        }
+    }
+}

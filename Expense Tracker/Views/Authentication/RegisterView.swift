@@ -113,12 +113,8 @@ struct RegisterView: View {
                                 Button {
                                     vm.currency = c.currencyName
                                 } label: {
-                                    HStack {
-                                        Text(c.flag)
-                                        Text(c.name)
-                                        Spacer()
-                                        Text(c.currencyName)
-                                            .foregroundColor(.white)
+                                    HStack(spacing: 10) {
+                                        Text("\(c.flag) \(c.currencyName)")
                                     }
                                 }
                             }

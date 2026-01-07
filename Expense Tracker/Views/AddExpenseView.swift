@@ -48,6 +48,10 @@ struct AddExpenseView: View {
         }
         return false
     }
+    
+    private var currencySymbol: String {
+        Currency.symbol(from: authVM.userProfile?.currency ?? "USD - US Dollar")
+    }
 
     var body: some View {
         NavigationStack {
@@ -196,7 +200,7 @@ struct AddExpenseView: View {
     // MARK: - Amount Field
     private var amountField: some View {
         HStack(spacing: 8) {
-            Text("$")
+            Text(currencySymbol)
                 .foregroundColor(.secondary)
                 .font(.system(size: 20).weight(.bold))
 
