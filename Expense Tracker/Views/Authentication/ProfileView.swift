@@ -30,6 +30,10 @@ struct ProfileView: View {
                         .onTapGesture {
                             showAddCategorySheet = true
                         }
+                    categoryRow("Add Income")
+                        .onTapGesture {
+                            print("Add Income tapped...")
+                        }
                 }
                 .padding()
                 .background(Color.white.opacity(0.06))

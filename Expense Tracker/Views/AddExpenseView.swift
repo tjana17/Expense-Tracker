@@ -12,6 +12,8 @@ import FirebaseFirestore
 struct AddExpenseView: View {
     // ViewModel for categories
     @StateObject private var categoriesVM = CategoriesViewModel()
+    // New view model for saving expenses
+    @StateObject private var vm = AddExpenseViewModel()
     // Access current user
     @EnvironmentObject private var authVM: AuthViewModel
 
@@ -24,26 +26,13 @@ struct AddExpenseView: View {
     // Confirmation sheet
     @State private var showConfirmSheet: Bool = false
 
-    // Payment Type enum and selection
-    private enum PaymentType: String, CaseIterable, Identifiable {
-        case cash = "Cash"
-        case card = "Card"
-        case online = "Online"
-        case upi = "UPI"
-
-        var id: String { rawValue }
-
-        var iconName: String {
-            switch self {
-            case .cash: return "banknote"
-            case .card: return "creditcard"
-            case .online: return "arrow.left.arrow.right.circle"
-            case .upi: return "qrcode.viewfinder"
-            }
-        }
-    }
     @State private var selectedPaymentType: PaymentType = .cash
 
+    // Toast state
+    @State private var showToast: Bool = false
+    @State private var toastMessage: String = ""
+    @State private var toastStyle: ToastStyle = .success
+    
     private var formattedDate: String {
         let f = DateFormatter()
         f.dateStyle = .medium
@@ -54,7 +43,6 @@ struct AddExpenseView: View {
     // Simple validation for enabling the save button
     private var canSave: Bool {
         guard selectedCategory != nil else { return false }
-        // check a valid decimal amount > 0
         if let value = Double(amountText.replacingOccurrences(of: ",", with: ".")), value > 0 {
             return true
         }
@@ -118,11 +106,12 @@ struct AddExpenseView: View {
                 .presentationDetents([.height(320), .medium])
                 .presentationCornerRadius(16)
         }
+        // Reusable toast overlay
+        .toast(isPresented: $showToast, message: toastMessage, style: toastStyle)
     }
     
     // MARK: - Category Dropdown
     private var categoryMenu: some View {
-        // Menu with custom label field
         Menu {
             ForEach(categoriesVM.categories, id: \.self) { category in
                 Button {
@@ -157,7 +146,6 @@ struct AddExpenseView: View {
             .background(Color(.secondarySystemBackground))
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .onAppear {
-                // Fetch categories when the label first appears
                 guard let uid = authVM.user?.uid else { return }
                 Task {
                     do {
@@ -207,7 +195,6 @@ struct AddExpenseView: View {
     
     // MARK: - Amount Field
     private var amountField: some View {
-        // Amount TextField with leading $ and trailing clear button
         HStack(spacing: 8) {
             Text("$")
                 .foregroundColor(.secondary)
@@ -245,7 +232,6 @@ struct AddExpenseView: View {
     
     // MARK: - Datepicker
     private var datePicker: some View {
-        // Read-only "textfield" style with trailing calendar icon; taps open a date picker
         Button {
             showDatePicker = true
         } label: {
@@ -369,7 +355,7 @@ struct AddExpenseView: View {
 
                 Button {
                     showConfirmSheet = false
-                    saveExpense()
+                    Task { await saveExpense() }
                 } label: {
                     Text("Confirm")
                         .bold()
@@ -386,23 +372,6 @@ struct AddExpenseView: View {
         .background(Color.black)
     }
 
-    // Generic confirm item builder
-    @ViewBuilder
-    private func confirmItem<Content: View>(icon: String, title: String, @ViewBuilder value: () -> Content) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Image(systemName: icon)
-                .foregroundColor(.white.opacity(0.8))
-            LabeledContent(title) {
-                value()
-            }
-            .foregroundStyle(.white.opacity(0.7))
-            Spacer()
-        }
-        .padding(10)
-        .background(Color.white.opacity(0.04))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-    }
-
     private func formattedAmount(_ text: String) -> String {
         if let value = Double(text.replacingOccurrences(of: ",", with: ".")) {
             let nf = NumberFormatter()
@@ -413,8 +382,8 @@ struct AddExpenseView: View {
         return "$0.00"
     }
 
-    // MARK: - Actions
-    private func saveExpense() {
+    // MARK: - Save Button Actions
+    private func saveExpense() async {
         guard let uid = authVM.user?.uid else {
             print("No authenticated user.")
             return
@@ -425,31 +394,43 @@ struct AddExpenseView: View {
             return
         }
 
-        let db = Firestore.firestore()
-        let docRef = db.collection("expenses").document() // auto-ID
+        do {
+            try await vm.saveExpense(
+                userId: uid,
+                categoryId: category.id,
+                categoryName: category.name,
+                categoryIcon: category.iconName,
+                amount: amount,
+                paymentType: selectedPaymentType.rawValue,
+                date: selectedDate
+            )
+            print("Expense saved.")
+            amountText = ""
+            selectedDate = Date()
+            selectedPaymentType = .cash
 
-        // Build payload (convert UUID to String for Firestore)
-        let data: [String: Any] = [
-            "id": docRef.documentID,
-            "userId": uid,
-            "categoryId": category.id.uuidString,
-            "categoryName": category.name,
-            "categoryIcon": category.iconName,
-            "amount": amount,
-            "paymentType": selectedPaymentType.rawValue,
-            "date": Timestamp(date: selectedDate),
-            "createdAt": FieldValue.serverTimestamp()
-        ]
-
-        docRef.setData(data) { error in
-            if let error = error {
-                print("Failed to save expense: \(error.localizedDescription)")
-            } else {
-                print("Expense saved.")
-                // Optionally reset fields
-                amountText = ""
-                selectedDate = Date()
-                selectedPaymentType = .cash
+            // Show success toast locally
+            showToast(message: "Expense saved successfully", style: .success)
+        } catch {
+            print("Failed to save expense: \(error.localizedDescription)")
+            // Show error toast locally
+            showToast(message: "Failed to save expense", style: .error)
+        }
+    }
+    
+    // MARK: - Local toast helper
+    private func showToast(message: String, style: ToastStyle) {
+        toastMessage = message
+        toastStyle = style
+        withAnimation {
+            showToast = true
+        }
+        Task {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            await MainActor.run {
+                withAnimation {
+                    showToast = false
+                }
             }
         }
     }

@@ -12,6 +12,12 @@ struct ExpenseHomeView: View {
     @State private var selectedTab: Int = 0
     // Use shared AuthViewModel from environment
     @EnvironmentObject private var authVM: AuthViewModel
+    
+    // Toast state
+    @State private var showToast: Bool = false
+    @State private var toastMessage: String = ""
+    @State private var toastStyle: ToastStyle = .success
+
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -39,6 +45,8 @@ struct ExpenseHomeView: View {
             }
         }
         .background(Color.black.edgesIgnoringSafeArea(.all))
+        // Reusable toast overlay
+        .toast(isPresented: $showToast, message: toastMessage, style: toastStyle)
     }
     
     private var homeView: some View {
@@ -106,13 +114,32 @@ extension ExpenseHomeView {
 
     private func iconButton(system: String) -> some View {
         Button(action: {
-            authVM.signOut()
+            // Show success toast locally
+            showToast(message: "Expense saved successfully", style: .success)
+        
         }) {
             Image(systemName: system)
                 .foregroundColor(.white)
                 .padding(12)
                 .background(Color.white.opacity(0.15))
                 .clipShape(RoundedRectangle(cornerRadius: 15))
+        }
+    }
+    
+    // MARK: - Local toast helper
+    private func showToast(message: String, style: ToastStyle) {
+        toastMessage = message
+        toastStyle = style
+        withAnimation {
+            showToast = true
+        }
+        Task {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            await MainActor.run {
+                withAnimation {
+                    showToast = false
+                }
+            }
         }
     }
 }
