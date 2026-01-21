@@ -18,21 +18,13 @@ class ExpenseHomeViewModel: ObservableObject {
     @Published var expenses: [Expense] = []
     @Published var categorySpending: [CategorySpending] = []
     @Published var aiAlert: String = ""
-    private let db = Firestore.firestore()
-    private var listener: ListenerRegistration?
-    @Published var user: User? = nil
-    @Published var lastErrorMessage: String? = nil
+    private let firestoreManager = FirestoreManager.shared
     // Published income loaded from Firestore
     @Published var incomeRecords: Income? = nil
+    let user = Auth.auth().currentUser
 
     init() {
         Task { await loadDashboard() }
-        self.user = Auth.auth().currentUser
-
-        // Optionally auto-fetch profile if already signed in
-        if let uid = user?.uid {
-            getIncomeRecords(for: uid)
-        }
     }
 
     func loadDashboard() async {
@@ -72,62 +64,22 @@ class ExpenseHomeViewModel: ObservableObject {
         }
     }
     
-    // MARK: - Fetch firestore
-    // Income Records
-    // Private: set up a snapshot listener for users/{uid}
-    func getIncomeRecords(for uid: String) {
-        // Remove old listener to avoid duplicates
-        listener?.remove()
-        listener = db.collection("incomes").document(uid).addSnapshotListener { snapshot, error in
-            if let error = error {
-                self.lastErrorMessage = error.localizedDescription
-                print("Fetch Income Error: \(error.localizedDescription)")
-                return
-            }
-            guard let snapshot = snapshot, let data = snapshot.data() else {
-                self.incomeRecords = nil
-                return
-            }
-            if let income = Income(uid: uid, dict: data) {
-                self.incomeRecords = income
-                debugPrint("income records: \(String(describing: self.incomeRecords))")
-            } else {
-                self.lastErrorMessage = "Failed to parse Income Records"
-                print("Failed to parse income for uid: \(uid)")
-            }
+    // MARK: - Fetch Firestore
+    func getIncome() async {
+        // Optionally auto-fetch profile if already signed in
+        if let uid = user?.uid {
+            await firestoreManager.getIncomeRecords(for: uid) { _, _  in }
         }
     }
-}
-
-
-struct Income: Identifiable, Codable {
-    var id: String { uid }
-    let uid: String
-    let amount: Double
-    let date: Date?
-    let createdAt: Date?
-    let note: String
     
-    // Manual init from Firestore dictionary
-    init?(uid: String, dict: [String: Any]) {
-        guard
-            let amount = dict["amount"] as? Double,
-            let note = dict["note"] as? String
-        else { return nil }
-        
-        var created: Date? = nil
-        var date: Date? = nil
-        if let ts = dict["createdAt"] as? Timestamp {
-            created = ts.dateValue()
+    func getExpenses() async {
+        // Optionally auto-fetch profile if already signed in
+        if let uid = user?.uid {
+            await firestoreManager.getExpensesRecords(for: uid) { _, _  in }
         }
-        if let ts = dict["updatedAt"] as? Timestamp {
-            date = ts.dateValue()
-        }
-        
-        self.uid = uid
-        self.amount = amount
-        self.note = note
-        self.date = date
-        self.createdAt = created
     }
+
 }
+
+
+

@@ -50,7 +50,10 @@ struct ExpenseHomeView: View {
         // Reusable toast overlay
         .toast(isPresented: $showToast, message: toastMessage, style: toastStyle)
         .onAppear {
-            expenseVM.getIncomeRecords(for: authVM.user?.uid ?? "")
+            Task {
+                await expenseVM.getIncome()
+                await expenseVM.getExpenses()
+            }
         }
     }
     

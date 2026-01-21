@@ -48,3 +48,16 @@ struct TransactionItem: Identifiable {
     }
 }
 
+
+struct Expenses: Identifiable, Codable {
+    let amount: Double
+    let categoryIcon: String
+    let categoryId: String
+    let categoryName: String
+    let createdAt: Date?
+    let date: Date?
+    let id: String
+    let paymentType: String
+    let updatedAt: Date?
+    let userId: String
+}
