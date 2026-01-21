@@ -12,7 +12,8 @@ struct ProfileView: View {
     // Expect to use shared AuthViewModel for user and sign out
     @EnvironmentObject private var authVM: AuthViewModel
     @State private var showAddCategorySheet = false
-
+    @State private var showAddIncomeSheet = false
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
@@ -32,7 +33,7 @@ struct ProfileView: View {
                         }
                     categoryRow("Add Income")
                         .onTapGesture {
-                            print("Add Income tapped...")
+                            showAddIncomeSheet = true
                         }
                 }
                 .padding()
@@ -63,6 +64,11 @@ struct ProfileView: View {
         .sheet(isPresented: $showAddCategorySheet) {
             AddCategorySheet()
                 .presentationDetents([.medium, .large])
+                .presentationCornerRadius(16)
+        }
+        .sheet(isPresented: $showAddIncomeSheet) {
+            AddIncomeSheet()
+                .presentationDetents([.medium])
                 .presentationCornerRadius(16)
         }
     }
@@ -220,3 +226,7 @@ struct ProfileView: View {
             .environmentObject(AuthViewModel())
     }
 }
+
+
+
+

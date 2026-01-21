@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import FirebaseAuth
 
 struct ExpenseHomeView: View {
 
@@ -17,6 +18,7 @@ struct ExpenseHomeView: View {
     @State private var showToast: Bool = false
     @State private var toastMessage: String = ""
     @State private var toastStyle: ToastStyle = .success
+    @StateObject private var expenseVM = ExpenseHomeViewModel()
 
 
     var body: some View {
@@ -47,6 +49,9 @@ struct ExpenseHomeView: View {
         .background(Color.black.edgesIgnoringSafeArea(.all))
         // Reusable toast overlay
         .toast(isPresented: $showToast, message: toastMessage, style: toastStyle)
+        .onAppear {
+            expenseVM.getIncomeRecords(for: authVM.user?.uid ?? "")
+        }
     }
     
     private var homeView: some View {
