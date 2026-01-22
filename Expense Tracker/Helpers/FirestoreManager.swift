@@ -13,11 +13,28 @@ class FirestoreManager {
     static let shared = FirestoreManager()
     private let db = Firestore.firestore()
     
+    // MARK: - Public Func
+    func getCurrentMonth() -> (start: Date, end: Date) {
+        let date = Date()
+        let calendar = Calendar.current
+        let year = calendar.component(.year, from: date)
+        let month = calendar.component(.month, from: date) // January = 1 in Swift
+
+        let components = DateComponents(year: year, month: month, day: 1)
+        let start = calendar.date(from: components)!
+        let end = calendar.date(byAdding: .month, value: 1, to: start)!
+        Log.info("Year - \(year), Month - \(month)")
+        return (start, end)
+    }
     
     // MARK: - Fetch
     // Income Records
     func getIncomeRecords(for uid: String, completion: @escaping (Bool, String) -> Void) async {
-        let docRef = db.collection("incomes").whereField("userId", isEqualTo: uid)
+        let currentMonth = getCurrentMonth()
+        let docRef = db.collection("incomes")
+            .whereField("userId", isEqualTo: uid)
+            .whereField("date", isGreaterThanOrEqualTo: currentMonth.start)
+            .whereField("date", isLessThan: currentMonth.end)
         var details: [Income] = []
         do {
             let snapshot = try await docRef.getDocuments()
@@ -44,16 +61,21 @@ class FirestoreManager {
                         note: note as? String ?? ""
                     )
                 )
-                debugPrint("Income Record: \(details)")
+                Log.success("Income Records: \(details)")
             }
         } catch {
-            completion(false, "")
+            completion(false, "Failed to fetch income records")
+            Log.error("Failed to fetch income records")
         }
     }
     
     // Expenses Records
     func getExpensesRecords(for uid: String, completion: @escaping(Bool, String) -> Void) async {
-        let docRef = db.collection("expenses").whereField("userId", isEqualTo: uid)
+        let currentMonth = getCurrentMonth()
+        let docRef = db.collection("expenses")
+            .whereField("userId", isEqualTo: uid)
+            .whereField("date", isGreaterThanOrEqualTo: currentMonth.start)
+            .whereField("date", isLessThan: currentMonth.end)
         var details: [Expenses] = []
         do {
             let snapshot = try await docRef.getDocuments()
@@ -90,11 +112,12 @@ class FirestoreManager {
                         updatedAt: updated,
                         userId: userId as? String ?? "")
                     )
-                debugPrint("Expenses Record: \(details)")
+                Log.success("Expense Records: \(details)")
                 completion(true, "Successfully fetched expenses records")
             }
         } catch {
             completion(false, "failed to fetch expenses records")
+            Log.error("Failed to fetch expenses records")
         }
     }
     
