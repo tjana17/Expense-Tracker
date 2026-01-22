@@ -22,6 +22,11 @@ class ExpenseHomeViewModel: ObservableObject {
     // Published income loaded from Firestore
     @Published var incomeRecords: [Income]? = nil
     @Published var expenseRecords: [Expenses]? = nil
+    
+    // New: previous month data
+    @Published var previousIncomeRecords: [Income]? = nil
+    @Published var previousExpenseRecords: [Expenses]? = nil
+    
     let user = Auth.auth().currentUser
 
     init() {
@@ -65,22 +70,31 @@ class ExpenseHomeViewModel: ObservableObject {
         }
     }
     
-    // MARK: - Fetch Firestore
+    // MARK: - Fetch Firestore (current month)
     func getIncome() async {
-        // Optionally auto-fetch profile if already signed in
         if let uid = user?.uid {
             self.incomeRecords = await firestoreManager.getIncomeRecords(for: uid) { _, _  in }
         }
     }
     
     func getExpenses() async {
-        // Optionally auto-fetch profile if already signed in
         if let uid = user?.uid {
             self.expenseRecords = await firestoreManager.getExpensesRecords(for: uid) { _, _  in }
         }
     }
+    
+    // MARK: - Fetch Firestore (previous month)
+    func getPreviousIncome() async {
+        if let uid = user?.uid {
+            self.previousIncomeRecords = await firestoreManager.getIncomeRecords(for: uid, monthOffset: -1) { _, _ in }
+        }
+    }
+    
+    func getPreviousExpenses() async {
+        if let uid = user?.uid {
+            self.previousExpenseRecords = await firestoreManager.getExpensesRecords(for: uid, monthOffset: -1) { _, _ in }
+        }
+    }
 
 }
-
-
 

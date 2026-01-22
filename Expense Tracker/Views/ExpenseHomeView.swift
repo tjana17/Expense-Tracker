@@ -53,6 +53,9 @@ struct ExpenseHomeView: View {
             Task {
                 await expenseVM.getIncome()
                 await expenseVM.getExpenses()
+                // Previous-month data for stats
+                await expenseVM.getPreviousIncome()
+                await expenseVM.getPreviousExpenses()
             }
         }
     }
@@ -156,11 +159,15 @@ extension ExpenseHomeView {
 
     private var balanceSection: some View {
         VStack(spacing: 5) {
+            let currencySymbol = Currency.symbol(from: authVM.userProfile?.currency ?? "USD - US Dollar")
+            let income = expenseVM.incomeRecords?.first?.amount
+            let expense = expenseVM.expenseRecords?.compactMap { $0.amount }.reduce(0, +)
+            let totalBalance: Double = (income ?? 0.0) - (expense ?? 0.0)
             Text("Total Balance")
                 .foregroundColor(.white.opacity(0.7))
                 .font(.headline)
 
-            Text("$500,489")
+            Text("\(formatCurrency(totalBalance, symbol: currencySymbol))")
                 .font(.system(size: 42, weight: .bold))
                 .foregroundColor(.white)
         }
@@ -173,20 +180,35 @@ extension ExpenseHomeView {
     private var statsCards: some View {
         HStack(spacing: 15) {
             let currencySymbol = Currency.symbol(from: authVM.userProfile?.currency ?? "USD - US Dollar")
-            let income = expenseVM.incomeRecords?.first?.amount
-            let expense = expenseVM.expenseRecords?.compactMap { $0.amount }.reduce(0, +)
+            
+            // Current totals
+            let currentIncome = expenseVM.incomeRecords?.compactMap { $0.amount }.reduce(0, +) ?? 0
+            let currentExpense = expenseVM.expenseRecords?.compactMap { $0.amount }.reduce(0, +) ?? 0
+            
+            // Previous totals
+            let previousIncome = expenseVM.previousIncomeRecords?.compactMap { $0.amount }.reduce(0, +) ?? 0
+            let previousExpense = expenseVM.previousExpenseRecords?.compactMap { $0.amount }.reduce(0, +) ?? 0
+            
+            // Percentage changes (numeric, for color)
+            let incomeChange = percentChange(current: currentIncome, previous: previousIncome)
+            let expenseChange = percentChange(current: currentExpense, previous: previousExpense)
+            
+            // Colors: income up is green, down is red; expenses up is red, down is green.
+            let incomeColor: Color = trendColor(change: incomeChange, positiveIsGood: true)
+            let expenseColor: Color = trendColor(change: expenseChange, positiveIsGood: false)
+            
             statCard(
                 title: "Expense",
-                amount: "\(formatCurrency(expense ?? 0.0, symbol: currencySymbol), default: "0.00")",
-                percent: "13.39%",
-                color: .red
+                amount: "\(formatCurrency(currentExpense, symbol: currencySymbol))",
+                percent: safeFormattedPercent(current: currentExpense, previous: previousExpense),
+                color: expenseColor
             )
 
             statCard(
                 title: "Income",
-                amount: "\(formatCurrency(income ?? 0.0, symbol: currencySymbol), default: "0.00")",
-                percent: "5.22%",
-                color: .green
+                amount: "\(formatCurrency(currentIncome, symbol: currencySymbol))",
+                percent: safeFormattedPercent(current: currentIncome, previous: previousIncome),
+                color: incomeColor
             )
         }
     }
@@ -202,7 +224,7 @@ extension ExpenseHomeView {
             HStack {
                 Image(systemName: color == .red ? "arrow.down.right" : "arrow.up.right")
                     .foregroundColor(color)
-                Text(percent + " in this month")
+                Text(percent + " vs last month")
                     .foregroundColor(.white.opacity(0.6))
                     .font(.caption)
             }
@@ -216,25 +238,56 @@ extension ExpenseHomeView {
 extension ExpenseHomeView {
 
     private var aiInsightCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let currencySymbol = Currency.symbol(from: authVM.userProfile?.currency ?? "USD - US Dollar")
+        let totalIncome = expenseVM.incomeRecords?.compactMap { $0.amount }.reduce(0, +) ?? 0
+        let totalExpense = expenseVM.expenseRecords?.compactMap { $0.amount }.reduce(0, +) ?? 0
+        let net = totalIncome - totalExpense
+        let savingsRate = totalIncome > 0 ? (net / totalIncome) : 0
+        
+        let (titleColor, message) = aiInsightText(totalIncome: totalIncome, totalExpense: totalExpense, net: net, savingsRate: savingsRate, currencySymbol: currencySymbol)
 
+        return VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: "sparkles")
-                    .foregroundColor(.purple)
+                    .foregroundColor(titleColor)
                 Text("AI Insight")
-                    .foregroundColor(.purple)
+                    .foregroundColor(titleColor)
                     .font(.headline)
             }
 
-            Text("Great job Jana! You’ve saved 20% more than last month.")
+            Text(message)
                 .foregroundColor(.white)
         }
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 20)
-                .stroke(Color.purple, lineWidth: 1)
+                .stroke(titleColor, lineWidth: 1)
                 .background(Color.white.opacity(0.05))
         )
+    }
+    
+    // Build insight text from live Firestore data
+    private func aiInsightText(totalIncome: Double, totalExpense: Double, net: Double, savingsRate: Double, currencySymbol: String) -> (Color, String) {
+        // Choose a color mood
+        let color: Color
+        let msg: String
+        
+        switch savingsRate {
+            case let r where r >= 0.2:
+                color = .green
+                msg = "Great job! You’ve saved \(formatCurrency(net, symbol: currencySymbol)) this month (\(Int(r * 100))%). Keep it up!"
+            case 0.0..<0.2:
+                color = .yellow
+                if net >= 0 {
+                    msg = "Nice! You’re in the green with \(formatCurrency(net, symbol: currencySymbol)) saved (\(Int(savingsRate * 100))%). Consider trimming dining/entertainment to boost savings."
+                } else {
+                    msg = "Heads up: you’re overspending by \(formatCurrency(abs(net), symbol: currencySymbol)). Review recurring costs to get back on track."
+                }
+            default:
+                color = .red
+                msg = "Alert: expenses (\(formatCurrency(totalExpense, symbol: currencySymbol))) exceed income (\(formatCurrency(totalIncome, symbol: currencySymbol))). Try pausing non-essential spending."
+        }
+        return (color, msg)
     }
 }
 
@@ -244,7 +297,7 @@ extension ExpenseHomeView {
         VStack(alignment: .leading, spacing: 15) {
 
             HStack {
-                Text("Transactions")
+                Text("Expenses")
                     .font(.title3.bold())
                     .foregroundColor(.white)
 
@@ -255,32 +308,19 @@ extension ExpenseHomeView {
             }
 
             VStack(spacing: 15) {
-                transactionRow(
-                    icon: "fork.knife",
-                    title: "Dinner",
-                    date: "Today, 12:30 AM",
-                    amount: "- $89.69",
-                    color: .orange,
-                    isPositive: false
-                )
-
-                transactionRow(
-                    icon: "shippingbox.fill",
-                    title: "Design Project",
-                    date: "Yesterday, 08:10 AM",
-                    amount: "+ $1500.00",
-                    color: .pink,
-                    isPositive: true
-                )
-
-                transactionRow(
-                    icon: "cross.case.fill",
-                    title: "Medicine",
-                    date: "Today, 12:30 AM",
-                    amount: "- $369.54",
-                    color: .teal,
-                    isPositive: false
-                )
+                let currencySymbol = Currency.symbol(from: authVM.userProfile?.currency ?? "USD - US Dollar")
+                if let expenses = expenseVM.expenseRecords, !expenses.isEmpty {
+                    ForEach(Array(expenses.suffix(3)).reversed()) { expense in
+                        transactionRow(
+                            icon: expense.categoryIcon.isEmpty ? "circle" : expense.categoryIcon,
+                            title: expense.categoryName,
+                            date: formattedDate(expense.date),
+                            amount: "\(formatCurrency(expense.amount, symbol: currencySymbol))",
+                            color: colorForIcon(expense.categoryIcon),
+                            isPositive: false
+                        )
+                    }
+                }
             }
         }
     }
@@ -323,4 +363,25 @@ extension ExpenseHomeView {
         .background(Color.white.opacity(0.06))
         .clipShape(RoundedRectangle(cornerRadius: 20))
     }
+    
+    // Fallback color mapping for a few known icons; default to secondary
+    private func colorForIcon(_ icon: String) -> Color {
+        switch icon {
+        case "fork.knife": return .orange
+        case "cross.case.fill": return .teal
+        case "sparkles": return .purple
+        case "shippingbox.fill": return .pink
+        default: return .white.opacity(0.8)
+        }
+    }
+    
+    // Safe date formatting for optional Date?
+    private func formattedDate(_ date: Date?) -> String {
+        guard let date else { return "—" }
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .short
+        return f.string(from: date)
+    }
 }
+

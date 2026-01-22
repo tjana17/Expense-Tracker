@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B4CC500F2F2281750045BE2C /* Testing in Frameworks */ = {isa = PBXBuildFile; productRef = B4CC500E2F2281750045BE2C /* Testing */; };
+		B4CC50112F2281750045BE2C /* _TestDiscovery in Frameworks */ = {isa = PBXBuildFile; productRef = B4CC50102F2281750045BE2C /* _TestDiscovery */; };
 		B4D5CE9D2EF6E3AF000A196D /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = B4D5CE9C2EF6E3AF000A196D /* FirebaseAuth */; };
 		B4D5CE9F2EF6E3AF000A196D /* FirebaseAuthCombine-Community in Frameworks */ = {isa = PBXBuildFile; productRef = B4D5CE9E2EF6E3AF000A196D /* FirebaseAuthCombine-Community */; };
 		B4D5CEA12EF6E3AF000A196D /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = B4D5CEA02EF6E3AF000A196D /* FirebaseCore */; };
@@ -37,9 +39,11 @@
 				B4D5CE9D2EF6E3AF000A196D /* FirebaseAuth in Frameworks */,
 				B4D5CEA12EF6E3AF000A196D /* FirebaseCore in Frameworks */,
 				B4D5CEAB2EF6E3AF000A196D /* FirebaseStorageCombine-Community in Frameworks */,
+				B4CC50112F2281750045BE2C /* _TestDiscovery in Frameworks */,
 				B4D5CEA32EF6E3AF000A196D /* FirebaseDatabase in Frameworks */,
 				B4D5CEA72EF6E3AF000A196D /* FirebaseFirestoreCombine-Community in Frameworks */,
 				B4D5CEA92EF6E3AF000A196D /* FirebaseStorage in Frameworks */,
+				B4CC500F2F2281750045BE2C /* Testing in Frameworks */,
 				B4D5CEA52EF6E3AF000A196D /* FirebaseFirestore in Frameworks */,
 				B4D5CE9F2EF6E3AF000A196D /* FirebaseAuthCombine-Community in Frameworks */,
 			);
@@ -92,6 +96,8 @@
 				B4D5CEA62EF6E3AF000A196D /* FirebaseFirestoreCombine-Community */,
 				B4D5CEA82EF6E3AF000A196D /* FirebaseStorage */,
 				B4D5CEAA2EF6E3AF000A196D /* FirebaseStorageCombine-Community */,
+				B4CC500E2F2281750045BE2C /* Testing */,
+				B4CC50102F2281750045BE2C /* _TestDiscovery */,
 			);
 			productName = "Expense Tracker";
 			productReference = B4E185C22EDC8194007DCD1E /* Expense Tracker.app */;
@@ -123,6 +129,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				B4D5CE9B2EF6E3AF000A196D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				B4CC500D2F2281750045BE2C /* XCRemoteSwiftPackageReference "swift-testing" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B4E185C32EDC8194007DCD1E /* Products */;
@@ -301,7 +308,7 @@
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -333,7 +340,7 @@
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -362,6 +369,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		B4CC500D2F2281750045BE2C /* XCRemoteSwiftPackageReference "swift-testing" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-testing";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 6.2.3;
+			};
+		};
 		B4D5CE9B2EF6E3AF000A196D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
@@ -373,6 +388,16 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		B4CC500E2F2281750045BE2C /* Testing */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B4CC500D2F2281750045BE2C /* XCRemoteSwiftPackageReference "swift-testing" */;
+			productName = Testing;
+		};
+		B4CC50102F2281750045BE2C /* _TestDiscovery */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B4CC500D2F2281750045BE2C /* XCRemoteSwiftPackageReference "swift-testing" */;
+			productName = _TestDiscovery;
+		};
 		B4D5CE9C2EF6E3AF000A196D /* FirebaseAuth */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = B4D5CE9B2EF6E3AF000A196D /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
