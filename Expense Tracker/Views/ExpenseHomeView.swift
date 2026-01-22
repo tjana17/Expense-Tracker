@@ -172,17 +172,19 @@ extension ExpenseHomeView {
 
     private var statsCards: some View {
         HStack(spacing: 15) {
-
+            let currencySymbol = Currency.symbol(from: authVM.userProfile?.currency ?? "USD - US Dollar")
+            let income = expenseVM.incomeRecords?.first?.amount
+            let expense = expenseVM.expenseRecords?.compactMap { $0.amount }.reduce(0, +)
             statCard(
                 title: "Expense",
-                amount: "$24,589",
+                amount: "\(formatCurrency(expense ?? 0.0, symbol: currencySymbol), default: "0.00")",
                 percent: "13.39%",
                 color: .red
             )
 
             statCard(
                 title: "Income",
-                amount: "$40,432",
+                amount: "\(formatCurrency(income ?? 0.0, symbol: currencySymbol), default: "0.00")",
                 percent: "5.22%",
                 color: .green
             )

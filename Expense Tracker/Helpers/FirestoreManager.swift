@@ -29,7 +29,7 @@ class FirestoreManager {
     
     // MARK: - Fetch
     // Income Records
-    func getIncomeRecords(for uid: String, completion: @escaping (Bool, String) -> Void) async {
+    func getIncomeRecords(for uid: String, completion: @escaping (Bool, String) -> Void) async -> [Income] {
         let currentMonth = getCurrentMonth()
         let docRef = db.collection("incomes")
             .whereField("userId", isEqualTo: uid)
@@ -63,14 +63,16 @@ class FirestoreManager {
                 )
                 Log.success("Income Records: \(details)")
             }
+            return details
         } catch {
             completion(false, "Failed to fetch income records")
             Log.error("Failed to fetch income records")
+            return details
         }
     }
     
     // Expenses Records
-    func getExpensesRecords(for uid: String, completion: @escaping(Bool, String) -> Void) async {
+    func getExpensesRecords(for uid: String, completion: @escaping(Bool, String) -> Void) async -> [Expenses] {
         let currentMonth = getCurrentMonth()
         let docRef = db.collection("expenses")
             .whereField("userId", isEqualTo: uid)
@@ -115,9 +117,11 @@ class FirestoreManager {
                 Log.success("Expense Records: \(details)")
                 completion(true, "Successfully fetched expenses records")
             }
+            return details
         } catch {
             completion(false, "failed to fetch expenses records")
             Log.error("Failed to fetch expenses records")
+            return details
         }
     }
     

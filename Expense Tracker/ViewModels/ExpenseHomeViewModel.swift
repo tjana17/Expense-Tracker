@@ -20,7 +20,8 @@ class ExpenseHomeViewModel: ObservableObject {
     @Published var aiAlert: String = ""
     private let firestoreManager = FirestoreManager.shared
     // Published income loaded from Firestore
-    @Published var incomeRecords: Income? = nil
+    @Published var incomeRecords: [Income]? = nil
+    @Published var expenseRecords: [Expenses]? = nil
     let user = Auth.auth().currentUser
 
     init() {
@@ -68,14 +69,14 @@ class ExpenseHomeViewModel: ObservableObject {
     func getIncome() async {
         // Optionally auto-fetch profile if already signed in
         if let uid = user?.uid {
-            await firestoreManager.getIncomeRecords(for: uid) { _, _  in }
+            self.incomeRecords = await firestoreManager.getIncomeRecords(for: uid) { _, _  in }
         }
     }
     
     func getExpenses() async {
         // Optionally auto-fetch profile if already signed in
         if let uid = user?.uid {
-            await firestoreManager.getExpensesRecords(for: uid) { _, _  in }
+            self.expenseRecords = await firestoreManager.getExpensesRecords(for: uid) { _, _  in }
         }
     }
 
