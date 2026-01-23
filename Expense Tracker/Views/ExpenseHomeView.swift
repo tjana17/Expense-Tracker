@@ -19,6 +19,7 @@ struct ExpenseHomeView: View {
     @State private var toastMessage: String = ""
     @State private var toastStyle: ToastStyle = .success
     @StateObject private var expenseVM = ExpenseHomeViewModel()
+    @State private var showExpenseList: Bool = false
 
 
     var body: some View {
@@ -76,11 +77,10 @@ struct ExpenseHomeView: View {
         .background(Color.black.edgesIgnoringSafeArea(.all))
         .onAppear {
             Task {
-                await expenseVM.getCurrentMonthIncome()
-                await expenseVM.getCurrentMonthExpenses()
+                // Current-month data for stats
+                await expenseVM.getCurrentMonthRecords()
                 // Previous-month data for stats
-                await expenseVM.getPreviousIncome()
-                await expenseVM.getPreviousExpenses()
+                await expenseVM.getPreviousMonthRecords()
             }
         }
 
@@ -305,6 +305,9 @@ extension ExpenseHomeView {
 
                 Text("Show All")
                     .foregroundColor(.white.opacity(0.6))
+                    .onTapGesture {
+                        showExpenseList = true
+                    }
             }
 
             VStack(spacing: 15) {
@@ -322,6 +325,9 @@ extension ExpenseHomeView {
                     }
                 }
             }
+        }
+        .navigationDestination(isPresented: $showExpenseList) {
+            ExpensesListView()
         }
     }
 
@@ -353,7 +359,7 @@ extension ExpenseHomeView {
 
             VStack(alignment: .trailing) {
                 Text(amount)
-                    .foregroundColor(isPositive ? .green : .red)
+                    .foregroundColor(.white)
                 Text("Cash")
                     .foregroundColor(.white.opacity(0.5))
                     .font(.caption)
@@ -362,26 +368,6 @@ extension ExpenseHomeView {
         .padding()
         .background(Color.white.opacity(0.06))
         .clipShape(RoundedRectangle(cornerRadius: 20))
-    }
-    
-    // Fallback color mapping for a few known icons; default to secondary
-    private func colorForIcon(_ icon: String) -> Color {
-        switch icon {
-        case "fork.knife": return .orange
-        case "cross.case.fill": return .teal
-        case "sparkles": return .purple
-        case "shippingbox.fill": return .pink
-        default: return .white.opacity(0.8)
-        }
-    }
-    
-    // Safe date formatting for optional Date?
-    private func formattedDate(_ date: Date?) -> String {
-        guard let date else { return "—" }
-        let f = DateFormatter()
-        f.dateStyle = .medium
-        f.timeStyle = .short
-        return f.string(from: date)
     }
 }
 
