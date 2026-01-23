@@ -314,12 +314,13 @@ extension ExpenseHomeView {
                 let currencySymbol = Currency.symbol(from: authVM.userProfile?.currency ?? "USD - US Dollar")
                 if let expenses = expenseVM.currentExpenseRecords, !expenses.isEmpty {
                     ForEach(Array(expenses.suffix(3)).reversed()) { expense in
-                        transactionRow(
-                            icon: expense.categoryIcon.isEmpty ? "circle" : expense.categoryIcon,
+                        TransactionRowView(
+                            systemIconName: expense.categoryIcon.isEmpty ? "circle" : expense.categoryIcon,
                             title: expense.categoryName,
-                            date: formattedDate(expense.date),
-                            amount: "\(formatCurrency(expense.amount, symbol: currencySymbol))",
-                            color: colorForIcon(expense.categoryIcon),
+                            subtitle: formattedDate(expense.date),
+                            amountText: "\(formatCurrency(expense.amount, symbol: currencySymbol))",
+                            tint: colorForIcon(expense.categoryIcon),
+                            accessoryText: "Cash",
                             isPositive: false
                         )
                     }
@@ -330,44 +331,4 @@ extension ExpenseHomeView {
             ExpensesListView()
         }
     }
-
-    private func transactionRow(
-        icon: String, title: String, date: String,
-        amount: String, color: Color, isPositive: Bool
-    ) -> some View {
-
-        HStack {
-            ZStack {
-                Circle()
-                    .fill(color.opacity(0.15))
-                    .frame(width: 50, height: 50)
-                Image(systemName: icon)
-                    .foregroundColor(color)
-            }
-
-            VStack(alignment: .leading) {
-                Text(title)
-                    .foregroundColor(.white)
-                    .font(.headline)
-
-                Text(date)
-                    .foregroundColor(.white.opacity(0.6))
-                    .font(.caption)
-            }
-
-            Spacer()
-
-            VStack(alignment: .trailing) {
-                Text(amount)
-                    .foregroundColor(.white)
-                Text("Cash")
-                    .foregroundColor(.white.opacity(0.5))
-                    .font(.caption)
-            }
-        }
-        .padding()
-        .background(Color.white.opacity(0.06))
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-    }
 }
-
