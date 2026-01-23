@@ -49,15 +49,6 @@ struct ExpenseHomeView: View {
         .background(Color.black.edgesIgnoringSafeArea(.all))
         // Reusable toast overlay
         .toast(isPresented: $showToast, message: toastMessage, style: toastStyle)
-        .onAppear {
-            Task {
-                await expenseVM.getIncome()
-                await expenseVM.getExpenses()
-                // Previous-month data for stats
-                await expenseVM.getPreviousIncome()
-                await expenseVM.getPreviousExpenses()
-            }
-        }
     }
     
     private var homeView: some View {
@@ -83,6 +74,15 @@ struct ExpenseHomeView: View {
             .background(Color.black)
         }
         .background(Color.black.edgesIgnoringSafeArea(.all))
+        .onAppear {
+            Task {
+                await expenseVM.getCurrentMonthIncome()
+                await expenseVM.getCurrentMonthExpenses()
+                // Previous-month data for stats
+                await expenseVM.getPreviousIncome()
+                await expenseVM.getPreviousExpenses()
+            }
+        }
 
     }
     
@@ -160,8 +160,8 @@ extension ExpenseHomeView {
     private var balanceSection: some View {
         VStack(spacing: 5) {
             let currencySymbol = Currency.symbol(from: authVM.userProfile?.currency ?? "USD - US Dollar")
-            let income = expenseVM.incomeRecords?.first?.amount
-            let expense = expenseVM.expenseRecords?.compactMap { $0.amount }.reduce(0, +)
+            let income = expenseVM.currentIncomeRecords?.first?.amount
+            let expense = expenseVM.currentExpenseRecords?.compactMap { $0.amount }.reduce(0, +)
             let totalBalance: Double = (income ?? 0.0) - (expense ?? 0.0)
             Text("Total Balance")
                 .foregroundColor(.white.opacity(0.7))
@@ -182,8 +182,8 @@ extension ExpenseHomeView {
             let currencySymbol = Currency.symbol(from: authVM.userProfile?.currency ?? "USD - US Dollar")
             
             // Current totals
-            let currentIncome = expenseVM.incomeRecords?.compactMap { $0.amount }.reduce(0, +) ?? 0
-            let currentExpense = expenseVM.expenseRecords?.compactMap { $0.amount }.reduce(0, +) ?? 0
+            let currentIncome = expenseVM.currentIncomeRecords?.compactMap { $0.amount }.reduce(0, +) ?? 0
+            let currentExpense = expenseVM.currentExpenseRecords?.compactMap { $0.amount }.reduce(0, +) ?? 0
             
             // Previous totals
             let previousIncome = expenseVM.previousIncomeRecords?.compactMap { $0.amount }.reduce(0, +) ?? 0
@@ -239,8 +239,8 @@ extension ExpenseHomeView {
 
     private var aiInsightCard: some View {
         let currencySymbol = Currency.symbol(from: authVM.userProfile?.currency ?? "USD - US Dollar")
-        let totalIncome = expenseVM.incomeRecords?.compactMap { $0.amount }.reduce(0, +) ?? 0
-        let totalExpense = expenseVM.expenseRecords?.compactMap { $0.amount }.reduce(0, +) ?? 0
+        let totalIncome = expenseVM.currentIncomeRecords?.compactMap { $0.amount }.reduce(0, +) ?? 0
+        let totalExpense = expenseVM.currentExpenseRecords?.compactMap { $0.amount }.reduce(0, +) ?? 0
         let net = totalIncome - totalExpense
         let savingsRate = totalIncome > 0 ? (net / totalIncome) : 0
         
@@ -309,7 +309,7 @@ extension ExpenseHomeView {
 
             VStack(spacing: 15) {
                 let currencySymbol = Currency.symbol(from: authVM.userProfile?.currency ?? "USD - US Dollar")
-                if let expenses = expenseVM.expenseRecords, !expenses.isEmpty {
+                if let expenses = expenseVM.currentExpenseRecords, !expenses.isEmpty {
                     ForEach(Array(expenses.suffix(3)).reversed()) { expense in
                         transactionRow(
                             icon: expense.categoryIcon.isEmpty ? "circle" : expense.categoryIcon,

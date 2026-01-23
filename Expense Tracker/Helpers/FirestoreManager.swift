@@ -14,19 +14,6 @@ class FirestoreManager {
     private let db = Firestore.firestore()
     
     // MARK: - Public Func
-    func getCurrentMonth() -> (start: Date, end: Date) {
-        let date = Date()
-        let calendar = Calendar.current
-        let year = calendar.component(.year, from: date)
-        let month = calendar.component(.month, from: date) // January = 1 in Swift
-
-        let components = DateComponents(year: year, month: month, day: 1)
-        let start = calendar.date(from: components)!
-        let end = calendar.date(byAdding: .month, value: 1, to: start)!
-        Log.info("Year - \(year), Month - \(month)")
-        return (start, end)
-    }
-    
     // New: generic month range by offset (e.g., -1 for previous month)
     func getMonth(offsetBy months: Int) -> (start: Date, end: Date) {
         let date = Date()
@@ -43,13 +30,10 @@ class FirestoreManager {
     }
     
     // MARK: - Fetch
-    // Income Records
+    // Fetch All Income Records
     func getIncomeRecords(for uid: String, completion: @escaping (Bool, String) -> Void) async -> [Income] {
-        let currentMonth = getCurrentMonth()
         let docRef = db.collection("incomes")
             .whereField("userId", isEqualTo: uid)
-            .whereField("date", isGreaterThanOrEqualTo: currentMonth.start)
-            .whereField("date", isLessThan: currentMonth.end)
         var details: [Income] = []
         do {
             let snapshot = try await docRef.getDocuments()
@@ -127,13 +111,10 @@ class FirestoreManager {
         }
     }
     
-    // Expenses Records
+    // Fetch All Expenses Records
     func getExpensesRecords(for uid: String, completion: @escaping(Bool, String) -> Void) async -> [Expenses] {
-        let currentMonth = getCurrentMonth()
         let docRef = db.collection("expenses")
             .whereField("userId", isEqualTo: uid)
-            .whereField("date", isGreaterThanOrEqualTo: currentMonth.start)
-            .whereField("date", isLessThan: currentMonth.end)
         var details: [Expenses] = []
         do {
             let snapshot = try await docRef.getDocuments()
