@@ -23,6 +23,8 @@ class ExpenseHomeViewModel: ObservableObject {
     @Published var currentIncomeRecords: [Income]? = nil
     @Published var currentExpenseRecords: [Expenses]? = nil
     @Published var allExpenseRecords: [Expenses]? = nil
+    // New: All incomes for list
+    @Published var allIncomeRecords: [Income]? = nil
     
     // New: previous month data
     @Published var previousIncomeRecords: [Income]? = nil
@@ -93,5 +95,11 @@ class ExpenseHomeViewModel: ObservableObject {
         }
     }
 
-}
+    // MARK: - Fetch Firestore (all incomes)
+    func getAllIncomeRecords() async {
+        if let uid = user?.uid {
+            self.allIncomeRecords = await firestoreManager.getIncomeRecords(for: uid) { _, _ in }
+        }
+    }
 
+}

@@ -15,42 +15,32 @@ struct GroupCollectionsView: View {
     @StateObject private var categoriesVM = CategoriesViewModel()
     // Layout: 3 columns for a 3x3 grid
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 16), count: 3)
+    @StateObject private var expenseVM = ExpenseHomeViewModel()
+    @State private var showExpenseList: Bool = false
+    @State private var showIncomeList: Bool = false
     
     var body: some View {
-        ScrollView {
-            CategoriesView()
-            VStack {
-                HStack {
-                    Text("Income")
-                        .font(.title3.bold())
-                        .foregroundColor(.white)
-                        .padding(.horizontal)
-                    Spacer()
-                    Text("View All")
-                        .font(.title3.bold())
-                        .foregroundColor(.white)
-                        .padding(.horizontal)
-                        .onTapGesture {
-                            Log.info("Income")
-                        }
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 25) {
+                CategoriesView()
+                
+                // Income preview section
+                VStack {
+                    SectionHeaderView(title: "Income") {
+                        showIncomeList = true
+                    }
+                    incomePreviewSection
                 }
-            }
-            VStack {
-                HStack {
-                    Text("Expenses")
-                        .font(.title3.bold())
-                        .foregroundColor(.white)
-                        .padding(.horizontal)
-                    Spacer()
-                    Text("View All")
-                        .font(.title3.bold())
-                        .foregroundColor(.white)
-                        .padding(.horizontal)
-                        .onTapGesture {
-                            Log.info("Expenses")
-                        }
+                
+                VStack {
+                    SectionHeaderView(title: "Expenses") {
+                        showExpenseList = true
+                    }
+                    expensesSection
                 }
+                Spacer(minLength: 100)
             }
+            .padding()
         }
         .background(Color.black.ignoresSafeArea())
         .onAppear {
@@ -58,44 +48,33 @@ struct GroupCollectionsView: View {
             Task {
                 do {
                     try await categoriesVM.fetchCategoriesForUser(userId: uid)
+                    // Load incomes for the preview/list
+                    await expenseVM.getAllIncomeRecords()
+                    // Current-month data for stats
+                    await expenseVM.getCurrentMonthRecords()
                 } catch {
                     print("Failed to fetch categories: \(error.localizedDescription)")
                 }
             }
         }
+        // Navigation destinations
+        .navigationDestination(isPresented: $showExpenseList) {
+            ExpensesListView()
+        }
+        .navigationDestination(isPresented: $showIncomeList) {
+            IncomesListView()
+        }
     }
     
     fileprivate func CategoriesView() -> some View {
         return VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Categories")
-                    .font(.title3.bold())
-                    .foregroundColor(.white)
-                    .padding(.horizontal)
-                Spacer()
-                Text("View All")
-                    .font(.title3.bold())
-                    .foregroundColor(.white)
-                    .padding(.horizontal)
-                    .onTapGesture {
-                        Log.info("Categories")
-                    }
+            SectionHeaderView(title: "Categories") {
+                Log.info("Categories")
             }
             
             if categoriesVM.categories.isEmpty {
                 // Empty state
-                VStack(spacing: 12) {
-                    Image(systemName: "square.grid.2x2")
-                        .font(.system(size: 36))
-                        .foregroundColor(.white.opacity(0.6))
-                    Text("No categories yet")
-                        .foregroundColor(.white.opacity(0.8))
-                    Text("Add some categories to get started.")
-                        .foregroundColor(.white.opacity(0.6))
-                        .font(.footnote)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 40)
+                EmptyCategoriesView()
             } else {
                 LazyVGrid(columns: columns, spacing: 16) {
                     ForEach(categoriesVM.categories.prefix(9)) { category in
@@ -107,34 +86,114 @@ struct GroupCollectionsView: View {
         }
         .padding(.top, 16)
     }
+    
+    fileprivate func EmptyCategoriesView() -> some View {
+        return VStack(spacing: 12) {
+            Image(systemName: "square.grid.2x2")
+                .font(.system(size: 36))
+                .foregroundColor(.white.opacity(0.6))
+            Text("No categories yet")
+                .foregroundColor(.white.opacity(0.8))
+            Text("Add some categories to get started.")
+                .foregroundColor(.white.opacity(0.6))
+                .font(.footnote)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 40)
+    }
 }
 
-struct CategoryCard: View {
-    let category: Category
-
-    var body: some View {
-        VStack(spacing: 10) {
-            ZStack {
-                Circle()
-                    .fill(Color.white.opacity(0.12))
-                    .frame(width: 60, height: 60)
-                Image(systemName: category.iconName.isEmpty ? "folder" : category.iconName)
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundColor(.white)
+extension GroupCollectionsView {
+    // MARK: - Income Preview (last 3, amount + note + date right-aligned)
+    private var incomePreviewSection: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            let currencySymbol = Currency.symbol(from: authVM.userProfile?.currency ?? "USD - US Dollar")
+            if let incomes = expenseVM.allIncomeRecords, !incomes.isEmpty {
+                // Sort newest first and take last three by date
+                let sorted = incomes.sorted {
+                    switch ($0.date, $1.date) {
+                    case let (d0?, d1?):
+                        return d0 > d1
+                    case (nil, _?):
+                        return false
+                    case (_?, nil):
+                        return true
+                    case (nil, nil):
+                        return false
+                    }
+                }
+                let lastThree = Array(sorted.prefix(3))
+                
+                VStack(spacing: 15) {
+                    // Use enumerated index as unique identity
+                    ForEach(Array(lastThree.enumerated()), id: \.offset) { _, income in
+                        IncomePreviewRow(
+                            amountText: formatCurrency(income.amount, symbol: currencySymbol),
+                            note: income.note,
+                            dateText: formattedDate(income.date)
+                        )
+                    }
+                }
+            } else {
+                Text("No income records found.")
+                    .foregroundColor(.white.opacity(0.6))
             }
-
-            Text(category.name)
-                .font(.subheadline.weight(.semibold))
-                .foregroundColor(.white)
-                .lineLimit(2)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: .infinity)
         }
-        .padding(.vertical, 14)
-        .padding(.horizontal, 12)
-        .background(Color.white.opacity(0.06))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .contentShape(RoundedRectangle(cornerRadius: 14))
+    }
+    
+    // Small row view used in the preview list
+    private struct IncomePreviewRow: View {
+        let amountText: String
+        let note: String
+        let dateText: String
+        
+        var body: some View {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(amountText)
+                        .font(.system(size: 21).bold())
+                        .foregroundColor(.white)
+                    Spacer()
+                    Text(dateText)
+                        .foregroundColor(.white.opacity(0.6))
+                        .font(.caption)
+                        .multilineTextAlignment(.trailing)
+                }
+                Text(note.isEmpty ? "—" : note)
+                    .foregroundColor(.white.opacity(0.7))
+                    .font(.subheadline)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                
+                
+            }
+            .padding()
+            .background(Color.white.opacity(0.06))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+        }
+    }
+    
+    // Existing Expenses section unchanged
+    private var expensesSection: some View {
+        VStack(alignment: .leading, spacing: 15) {
+
+            VStack(spacing: 15) {
+                let currencySymbol = Currency.symbol(from: authVM.userProfile?.currency ?? "USD - US Dollar")
+                if let expenses = expenseVM.currentExpenseRecords, !expenses.isEmpty {
+                    ForEach(Array(expenses.suffix(3)).reversed()) { expense in
+                        TransactionRowView(
+                            systemIconName: expense.categoryIcon.isEmpty ? "circle" : expense.categoryIcon,
+                            title: expense.categoryName,
+                            subtitle: formattedDate(expense.date),
+                            amountText: "\(formatCurrency(expense.amount, symbol: currencySymbol))",
+                            tint: colorForIcon(expense.categoryIcon),
+                            accessoryText: "Cash",
+                            isPositive: false
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
