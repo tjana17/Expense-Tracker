@@ -63,11 +63,11 @@ struct ExpensesListView: View {
                                     HStack {
                                         Text(monthTitle(from: group.month))
                                             .foregroundColor(.white)
-                                            .font(.headline)
+                                            .font(.system(size: 18).bold())
                                         Spacer()
                                         Text("\(formatCurrency(group.total, symbol: currencySymbol))")
                                             .foregroundColor(.white)
-                                            .font(.headline)
+                                            .font(.system(size: 22).bold())
                                     }
                                     .padding(.horizontal, 4)
                                     

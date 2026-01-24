@@ -34,7 +34,7 @@ struct ExpenseHomeView: View {
                 AddExpenseView()
                     .tag(10)
                 
-                ExpenseChartView()
+                GroupCollectionsView()
                     .tag(2)
                 
                 ProfileView()
@@ -50,6 +50,10 @@ struct ExpenseHomeView: View {
         .background(Color.black.edgesIgnoringSafeArea(.all))
         // Reusable toast overlay
         .toast(isPresented: $showToast, message: toastMessage, style: toastStyle)
+        // Move navigationDestination here (outside lazy containers)
+        .navigationDestination(isPresented: $showExpenseList) {
+            ExpensesListView()
+        }
     }
     
     private var homeView: some View {
@@ -326,9 +330,6 @@ extension ExpenseHomeView {
                     }
                 }
             }
-        }
-        .navigationDestination(isPresented: $showExpenseList) {
-            ExpensesListView()
         }
     }
 }
