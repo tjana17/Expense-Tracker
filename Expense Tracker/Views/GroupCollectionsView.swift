@@ -127,7 +127,7 @@ extension GroupCollectionsView {
                 VStack(spacing: 15) {
                     // Use enumerated index as unique identity
                     ForEach(Array(lastThree.enumerated()), id: \.offset) { _, income in
-                        IncomePreviewRow(
+                        IncomeRowView(
                             amountText: formatCurrency(income.amount, symbol: currencySymbol),
                             note: income.note,
                             dateText: formattedDate(income.date)
@@ -138,38 +138,6 @@ extension GroupCollectionsView {
                 Text("No income records found.")
                     .foregroundColor(.white.opacity(0.6))
             }
-        }
-    }
-    
-    // Small row view used in the preview list
-    private struct IncomePreviewRow: View {
-        let amountText: String
-        let note: String
-        let dateText: String
-        
-        var body: some View {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(amountText)
-                        .font(.system(size: 21).bold())
-                        .foregroundColor(.white)
-                    Spacer()
-                    Text(dateText)
-                        .foregroundColor(.white.opacity(0.6))
-                        .font(.caption)
-                        .multilineTextAlignment(.trailing)
-                }
-                Text(note.isEmpty ? "—" : note)
-                    .foregroundColor(.white.opacity(0.7))
-                    .font(.subheadline)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                
-                
-            }
-            .padding()
-            .background(Color.white.opacity(0.06))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
         }
     }
     
