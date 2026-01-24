@@ -77,7 +77,7 @@ struct GroupCollectionsView: View {
                 EmptyCategoriesView()
             } else {
                 LazyVGrid(columns: columns, spacing: 16) {
-                    ForEach(categoriesVM.categories.prefix(9)) { category in
+                    ForEach(categoriesVM.categories.prefix(6)) { category in
                         CategoryCard(category: category)
                     }
                 }

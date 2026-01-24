@@ -31,7 +31,7 @@ struct ExpenseHomeView: View {
                 ExpenseChartView()
                     .tag(1)
                 
-                AddExpenseView()
+                GeneralAddView()
                     .tag(10)
                 
                 GroupCollectionsView()
