@@ -6,8 +6,6 @@
 //
 
 import SwiftUI
-
-import SwiftUI
 import Charts
 
 struct ExpenseChartView: View {
@@ -56,9 +54,27 @@ struct ExpenseChartView: View {
             .padding()
         }
         .background(Color.black.ignoresSafeArea())
-
+        .onAppear {
+            Task {
+                switch vm.selectedPeriod {
+                case .weekly:
+                    await vm.loadCurrentWeekSpending()
+                case .monthly:
+                    await vm.loadCurrentMonthSpending()
+                }
+            }
+        }
+        .onChange(of: vm.selectedPeriod) { newValue in
+            Task {
+                switch newValue {
+                case .weekly:
+                    await vm.loadCurrentWeekSpending()
+                case .monthly:
+                    await vm.loadCurrentMonthSpending()
+                }
+            }
+        }
     }
-
 
     // MARK: - Section Header
     private func sectionHeader(title: String) -> some View {
@@ -67,26 +83,41 @@ struct ExpenseChartView: View {
                 .font(.title.bold())
                 .foregroundColor(.white)
             Spacer()
-            HStack(spacing: 6) {
-                Text("Weekly")
-                    .foregroundColor(.white)
-                Image(systemName: "chevron.down")
-                    .foregroundColor(.white.opacity(0.7))
+
+            Menu {
+                Picker("Period", selection: $vm.selectedPeriod) {
+                    ForEach(ChartViewModel.Period.allCases) { period in
+                        Text(period.rawValue).tag(period)
+                    }
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Text(vm.selectedPeriod.rawValue)
+                        .foregroundColor(.white)
+                    Image(systemName: "chevron.down")
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(Color.white.opacity(0.12))
+                .clipShape(Capsule())
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(Color.white.opacity(0.12))
-            .clipShape(Capsule())
         }
     }
 
-
     // MARK: - Bar Chart
     private var spendingBarChart: some View {
-        Chart {
-            ForEach(vm.weeklySpending) { item in
+        let data: [WeeklySpending] = {
+            switch vm.selectedPeriod {
+            case .weekly: return vm.weeklySpending
+            case .monthly: return vm.monthlySpending
+            }
+        }()
+
+        return Chart {
+            ForEach(data) { item in
                 BarMark(
-                    x: .value("Day", item.day),
+                    x: .value(vm.selectedPeriod == .weekly ? "Day" : "Date", item.day),
                     y: .value("Amount", item.amount)
                 )
                 .foregroundStyle(Color.blue.opacity(0.7))
@@ -102,4 +133,3 @@ struct ExpenseChartView: View {
         }
     }
 }
-
