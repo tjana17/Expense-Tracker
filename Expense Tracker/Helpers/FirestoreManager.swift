@@ -214,5 +214,27 @@ class FirestoreManager {
         }
     }
     
+    // MARK: - Mutations (Expenses)
+    func deleteExpense(id: String) async throws {
+        try await db.collection("expenses").document(id).delete()
+        Log.success("Deleted expense id: \(id)")
+    }
+    
+    func updateExpense(_ expense: Expenses) async throws {
+        let payload: [String: Any] = [
+            "amount": expense.amount,
+            "categoryIcon": expense.categoryIcon,
+            "categoryId": expense.categoryId,
+            "categoryName": expense.categoryName,
+            "createdAt": expense.createdAt ?? FieldValue.serverTimestamp(),
+            "date": expense.date ?? FieldValue.serverTimestamp(),
+            "id": expense.id,
+            "paymentType": expense.paymentType,
+            "updatedAt": FieldValue.serverTimestamp(),
+            "userId": expense.userId
+        ]
+        try await db.collection("expenses").document(expense.id).setData(payload, merge: true)
+        Log.success("Updated expense id: \(expense.id)")
+    }
 }
 

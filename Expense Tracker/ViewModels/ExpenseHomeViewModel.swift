@@ -101,5 +101,16 @@ class ExpenseHomeViewModel: ObservableObject {
             self.allIncomeRecords = await firestoreManager.getIncomeRecords(for: uid) { _, _ in }
         }
     }
-
+    
+    // MARK: - Mutations (Expenses)
+    func deleteExpense(_ expense: Expenses) async throws {
+        try await firestoreManager.deleteExpense(id: expense.id)
+        await getAllExpenseRecords()
+    }
+    
+    func updateExpense(_ expense: Expenses) async throws {
+        try await firestoreManager.updateExpense(expense)
+        await getAllExpenseRecords()
+    }
 }
+
