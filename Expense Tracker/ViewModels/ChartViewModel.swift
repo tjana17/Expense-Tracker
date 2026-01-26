@@ -33,19 +33,19 @@ class ChartViewModel: ObservableObject {
     // Reuse WeeklySpending as a generic (label + amount) for month days "1"..."N"
     @Published var monthlySpending: [WeeklySpending] = []
 
-    @Published var categoryData: [CategoryData] = [
-        .init(category: .food, amount: 7500, color: .orange),
-        .init(category: .transport, amount: 1200, color: .blue),
-        .init(category: .projects, amount: 1600, color: .pink),
-        .init(category: .entertainment, amount: 1800, color: .purple)
-    ]
+    // Category summary data (now Firestore-backed categories)
+    @Published var categoryData: [CategoryData] = []
 
-    @Published var selectedCategory: ExpenseCategory = .food
+    // Center totals for donut (Income, Expenses, Savings)
+    @Published var totalIncome: Double = 0
+    @Published var totalExpenses: Double = 0
+    @Published var totalSavings: Double = 0
 
-    @Published var transactions: [TransactionItem] = [
-        .init(title: "Dinner", amount: -89.69, category: .food, categoryIcon: "", isPositive: false, date: .now),
-        .init(title: "Fast Food", amount: 120.53, category: .food, categoryIcon: "", isPositive: true, date: .now.addingTimeInterval(-86400))
-    ]
+    // Optional selection by Firestore category id
+    @Published var selectedCategoryId: String? = nil
+
+    // Local sample transactions are no longer used for categories; kept for compatibility if needed
+    @Published var transactions: [TransactionItem] = []
 
     private let firestoreManager = FirestoreManager.shared
 
@@ -53,18 +53,23 @@ class ChartViewModel: ObservableObject {
     func loadCurrentWeekSpending() async {
         guard let uid = Auth.auth().currentUser?.uid else {
             self.weeklySpending = Self.emptyWeek()
+            self.categoryData = []
+            self.totalIncome = 0
+            self.totalExpenses = 0
+            self.totalSavings = 0
             return
         }
 
         let (startOfWeek, endOfWeek) = Self.currentWeekRange()
 
         let all = await firestoreManager.getExpensesRecords(for: uid) { _, _ in }
-        let weekExpenses = all.compactMap { exp -> (date: Date, amount: Double)? in
+        let weekExpenses = all.compactMap { exp -> (date: Date, amount: Double, categoryId: String, categoryName: String, categoryIcon: String)? in
             guard let d = exp.date else { return nil }
-            return (d, exp.amount)
+            return (d, exp.amount, exp.categoryId, exp.categoryName, exp.categoryIcon)
         }
         .filter { $0.date >= startOfWeek && $0.date < endOfWeek }
 
+        // Build weekday totals
         let calendar = Calendar.current
         var totalsByWeekday: [Int: Double] = [:] // 1=Sun … 7=Sat
         for item in weekExpenses {
@@ -77,14 +82,21 @@ class ChartViewModel: ObservableObject {
             let total = totalsByWeekday[weekday] ?? 0
             return WeeklySpending(day: symbol, amount: total)
         }
-
         self.weeklySpending = ordered
+
+        // Refresh totals and category summary
+        await loadIncomeExpenseSummary()
+        await loadCategorySummary(for: weekExpenses.map { ($0.amount, $0.categoryId, $0.categoryName) })
     }
 
     // Public entry: load current calendar month (1…N) totals
     func loadCurrentMonthSpending() async {
         guard let uid = Auth.auth().currentUser?.uid else {
             self.monthlySpending = []
+            self.categoryData = []
+            self.totalIncome = 0
+            self.totalExpenses = 0
+            self.totalSavings = 0
             return
         }
 
@@ -101,11 +113,10 @@ class ChartViewModel: ObservableObject {
             return
         }
 
-        // Option 1: reuse existing "all expenses, then filter" like weekly
         let all = await firestoreManager.getExpensesRecords(for: uid) { _, _ in }
-        let monthExpenses = all.compactMap { exp -> (date: Date, amount: Double)? in
+        let monthExpenses = all.compactMap { exp -> (date: Date, amount: Double, categoryId: String, categoryName: String, categoryIcon: String)? in
             guard let d = exp.date else { return nil }
-            return (d, exp.amount)
+            return (d, exp.amount, exp.categoryId, exp.categoryName, exp.categoryIcon)
         }
         .filter { $0.date >= startOfMonth && $0.date < startOfNextMonth }
 
@@ -126,9 +137,113 @@ class ChartViewModel: ObservableObject {
         }
 
         self.monthlySpending = result
+
+        // Refresh totals and category summary
+        await loadIncomeExpenseSummary()
+        await loadCategorySummary(for: monthExpenses.map { ($0.amount, $0.categoryId, $0.categoryName) })
+    }
+
+    // MARK: - Donut Summary Loader (Income, Expenses, Savings)
+    func loadIncomeExpenseSummary() async {
+        guard let uid = Auth.auth().currentUser?.uid else {
+            self.totalIncome = 0
+            self.totalExpenses = 0
+            self.totalSavings = 0
+            // keep categoryData untouched here; category summary is loaded separately
+            return
+        }
+
+        // Build date range based on selectedPeriod
+        let cal = Calendar.current
+        let now = Date()
+
+        let range: (start: Date, end: Date)? = {
+            switch selectedPeriod {
+            case .weekly:
+                return Self.currentWeekRange()
+            case .monthly:
+                let comps = cal.dateComponents([.year, .month], from: now)
+                guard
+                    let year = comps.year,
+                    let month = comps.month,
+                    let startOfMonth = cal.date(from: DateComponents(year: year, month: month, day: 1)),
+                    let startOfNextMonth = cal.date(byAdding: .month, value: 1, to: startOfMonth)
+                else { return nil }
+                return (startOfMonth, startOfNextMonth)
+            }
+        }()
+
+        // Fetch all incomes and expenses, then filter by range client-side
+        async let incomesAll = firestoreManager.getIncomeRecords(for: uid) { _, _ in }
+        async let expensesAll = firestoreManager.getExpensesRecords(for: uid) { _, _ in }
+
+        let incomes = await incomesAll
+        let expenses = await expensesAll
+
+        let filteredIncome: [Income]
+        let filteredExpenses: [Expenses]
+
+        if let r = range {
+            filteredIncome = incomes.filter { inc in
+                if let d = inc.date {
+                    return d >= r.start && d < r.end
+                }
+                return false
+            }
+            filteredExpenses = expenses.filter { exp in
+                if let d = exp.date {
+                    return d >= r.start && d < r.end
+                }
+                return false
+            }
+        } else {
+            filteredIncome = incomes
+            filteredExpenses = expenses
+        }
+
+        let incomeTotal = filteredIncome.reduce(0.0) { $0 + $1.amount }
+        let expenseTotal = filteredExpenses.reduce(0.0) { $0 + $1.amount }
+        let savings = max(incomeTotal - expenseTotal, 0)
+
+        self.totalIncome = incomeTotal
+        self.totalExpenses = expenseTotal
+        self.totalSavings = savings
+        // Note: categoryData is managed by loadCategorySummary
+    }
+
+    // Build per-category summary for the selected period using Firestore categories
+    private func loadCategorySummary(for tuples: [(amount: Double, categoryId: String, categoryName: String)]) async {
+        // Group by categoryId to avoid duplicates differing only by casing
+        var byCategory: [String: (name: String, total: Double)] = [:]
+        for t in tuples {
+            var entry = byCategory[t.categoryId] ?? (name: t.categoryName, total: 0)
+            entry.total += t.amount
+            byCategory[t.categoryId] = entry
+        }
+
+        // Map to CategoryData with deterministic colors
+        let mapped: [CategoryData] = byCategory.map { (key, value) in
+            CategoryData(
+                categoryId: key,
+                categoryName: value.name,
+                amount: value.total,
+                color: Color.colorForCategoryKey(key.isEmpty ? value.name : key)
+            )
+        }
+        // Sort descending by amount
+        self.categoryData = mapped.sorted { $0.amount > $1.amount }
     }
 
     // Helpers
+
+    private func makeDonutSegments(income: Double, expenses: Double, savings: Double) -> [CategoryData] {
+        // Keep the donut as a 3-segment summary; we do not display categoryName here, but we need placeholders
+        return [
+            CategoryData(categoryId: "savings", categoryName: "Savings", amount: savings, color: .green),
+            CategoryData(categoryId: "expenses", categoryName: "Expenses", amount: expenses, color: .red),
+            CategoryData(categoryId: "income", categoryName: "Income", amount: income, color: .blue)
+        ]
+    }
 
     private static func emptyWeek() -> [WeeklySpending] {
         [
@@ -142,7 +257,7 @@ class ChartViewModel: ObservableObject {
         ]
     }
 
-    // Returns (startOfWeek, endOfWeek) where week starts Monday, using the user’s current calendar/locale
+    // Returns (startOfWeek, endOfWeek) where week starts Monday
     private static func currentWeekRange() -> (Date, Date) {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
@@ -175,3 +290,4 @@ class ChartViewModel: ObservableObject {
         ]
     }
 }
+

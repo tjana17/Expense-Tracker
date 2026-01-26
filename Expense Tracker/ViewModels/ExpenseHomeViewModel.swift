@@ -50,28 +50,28 @@ class ExpenseHomeViewModel: ObservableObject {
             Expense(title: "Medicine", date: .now, amount: -369.54, category: .medicine, isPositive: false)
         ]
 
-        categorySpending = [
-            .init(category: .food, amount: 850),
-            .init(category: .medicine, amount: 430),
-            .init(category: .transport, amount: 250),
-            .init(category: .entertainment, amount: 320)
-        ]
+//        categorySpending = [
+//            .init(category: .food, amount: 850),
+//            .init(category: .medicine, amount: 430),
+//            .init(category: .transport, amount: 250),
+//            .init(category: .entertainment, amount: 320)
+//        ]
 
-        generateAIAlert()
+//        generateAIAlert()
 
         isLoading = false
     }
 
     // Mock AI insight
-    func generateAIAlert() {
-        let food = categorySpending.first(where: { $0.category == .food })?.amount ?? 0
-
-        if food > 700 {
-            aiAlert = "⚠️ You’re nearing your monthly dining-out budget!"
-        } else {
-            aiAlert = "🎉 Great job! Your spending is well-balanced this month."
-        }
-    }
+//    func generateAIAlert() {
+//        let food = categorySpending.first(where: { $0.category == .food })?.amount ?? 0
+//
+//        if food > 700 {
+//            aiAlert = "⚠️ You’re nearing your monthly dining-out budget!"
+//        } else {
+//            aiAlert = "🎉 Great job! Your spending is well-balanced this month."
+//        }
+//    }
     
     // MARK: - Fetch Firestore (current month)
     func getCurrentMonthRecords() async {
