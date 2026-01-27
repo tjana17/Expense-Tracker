@@ -18,58 +18,68 @@ struct GroupCollectionsView: View {
     @StateObject private var expenseVM = ExpenseHomeViewModel()
     @State private var showExpenseList: Bool = false
     @State private var showIncomeList: Bool = false
+    // Navigation to full categories list
+    @State private var showAllCategories: Bool = false
     
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 25) {
-                CategoriesView()
-                
-                // Income preview section
-                VStack {
-                    SectionHeaderView(title: "Income") {
-                        showIncomeList = true
+        NavigationStack {
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 25) {
+                    CategoriesView()
+                    
+                    // Income preview section
+                    VStack {
+                        SectionHeaderView(title: "Income") {
+                            showIncomeList = true
+                        }
+                        incomePreviewSection
                     }
-                    incomePreviewSection
-                }
-                
-                VStack {
-                    SectionHeaderView(title: "Expenses") {
-                        showExpenseList = true
+                    
+                    VStack {
+                        SectionHeaderView(title: "Expenses") {
+                            showExpenseList = true
+                        }
+                        expensesSection
                     }
-                    expensesSection
+                    Spacer(minLength: 100)
                 }
-                Spacer(minLength: 100)
+                .padding()
             }
-            .padding()
+            .background(Color.black.ignoresSafeArea())
+            .onAppear {
+                guard let uid = authVM.user?.uid else { return }
+                Task {
+                    do {
+                        try await categoriesVM.fetchCategoriesForUser(userId: uid)
+                        // Load incomes for the preview/list
+                        await expenseVM.getAllIncomeRecords()
+                        // Current-month data for stats
+                        await expenseVM.getCurrentMonthRecords()
+                    } catch {
+                        print("Failed to fetch categories: \(error.localizedDescription)")
+                    }
+                }
+            }
+            // Move navigationDestination onto the NavigationStack (non-lazy ancestor)
+            .navigationDestination(isPresented: $showExpenseList) {
+                ExpensesListView()
+            }
+            .navigationDestination(isPresented: $showIncomeList) {
+                IncomesListView()
+            }
+            .navigationDestination(isPresented: $showAllCategories) {
+                CategoriesCollectionView(categoriesVM: categoriesVM)
+            }
+            .navigationTitle("Collections")
         }
         .background(Color.black.ignoresSafeArea())
-        .onAppear {
-            guard let uid = authVM.user?.uid else { return }
-            Task {
-                do {
-                    try await categoriesVM.fetchCategoriesForUser(userId: uid)
-                    // Load incomes for the preview/list
-                    await expenseVM.getAllIncomeRecords()
-                    // Current-month data for stats
-                    await expenseVM.getCurrentMonthRecords()
-                } catch {
-                    print("Failed to fetch categories: \(error.localizedDescription)")
-                }
-            }
-        }
-        // Navigation destinations
-        .navigationDestination(isPresented: $showExpenseList) {
-            ExpensesListView()
-        }
-        .navigationDestination(isPresented: $showIncomeList) {
-            IncomesListView()
-        }
     }
     
     fileprivate func CategoriesView() -> some View {
         return VStack(alignment: .leading, spacing: 16) {
             SectionHeaderView(title: "Categories") {
-                Log.info("Categories")
+                // Tapping "View All" shows the full categories collection
+                showAllCategories = true
             }
             
             if categoriesVM.categories.isEmpty {

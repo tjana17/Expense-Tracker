@@ -14,11 +14,11 @@ struct CategoryCard: View {
         VStack(spacing: 10) {
             ZStack {
                 Circle()
-                    .fill(Color.white.opacity(0.12))
+                    .fill(colorForIcon(category.iconName.isEmpty ? "folder" : category.iconName).opacity(0.18))
                     .frame(width: 60, height: 60)
                 Image(systemName: category.iconName.isEmpty ? "folder" : category.iconName)
                     .font(.system(size: 24, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(colorForIcon(category.iconName.isEmpty ? "folder" : category.iconName))
             }
 
             Text(category.name)

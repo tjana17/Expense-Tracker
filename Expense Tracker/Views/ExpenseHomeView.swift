@@ -49,7 +49,7 @@ struct ExpenseHomeView: View {
         }
         .background(Color.black.edgesIgnoringSafeArea(.all))
         // Reusable toast overlay
-        .toast(isPresented: $showToast, message: toastMessage, style: toastStyle)
+//        .toast(isPresented: $showToast, message: toastMessage, style: toastStyle)
         // Move navigationDestination here (outside lazy containers)
         .navigationDestination(isPresented: $showExpenseList) {
             ExpensesListView()

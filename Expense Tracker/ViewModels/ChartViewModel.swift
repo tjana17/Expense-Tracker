@@ -13,8 +13,8 @@ import FirebaseAuth
 class ChartViewModel: ObservableObject {
 
     enum Period: String, CaseIterable, Identifiable {
-        case weekly = "Weekly"
-        case monthly = "Monthly"
+        case weekly = "This Week"
+        case monthly = "This Month"
         var id: String { rawValue }
     }
 
