@@ -22,7 +22,6 @@ Track daily spending, visualize financial habits, and securely sync data across 
 - Add, edit, delete expenses  
 - Categorize by type (Food, Travel, Bills, etc.)  
 - Add notes and date  
-- Upload receipts (Firebase Storage)  
 - Smooth SwiftUI interface  
 
 ### 📈 Statistics & Insights
