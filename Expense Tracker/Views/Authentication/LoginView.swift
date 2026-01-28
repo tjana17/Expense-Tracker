@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import FirebaseAuth
 
 struct LoginView: View {
     // MARK: - Init
@@ -135,17 +136,11 @@ struct LoginView: View {
                         }
                         
                         // Call Firebase sign-in via AuthViewModel
-                        authVM.signIn(email: trimmedEmail, password: password)
-                        
-                        // Since AuthViewModel uses completion handlers and doesn’t expose error,
-                        // we peek at isSignedIn shortly after to show feedback.
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                            if authVM.isSignedIn {
-                                alertMessage = "Signed in successfully."
-                            } else {
+                        authVM.signIn(email: trimmedEmail, password: password) { result in
+                            if !result {
                                 alertMessage = "Sign in failed. Please check your credentials and try again."
+                                showAlert = true
                             }
-                            showAlert = true
                         }
                     } label: {
                         Text("Login")
@@ -205,7 +200,7 @@ struct LoginView: View {
     }
     
     func forgotPassword() {
-        // Validate email and simulate submission
+        // Validate email
         let trimmed = forgotEmail.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             forgotError = "Email is required"
@@ -215,11 +210,44 @@ struct LoginView: View {
             forgotError = "Please enter a valid email address"
             return
         }
-        // Simulate request and dismiss
+        
+        // Call Firebase Auth to send reset email
         forgotError = nil
-        isForgotPasswordActive = false
-        alertMessage = "Password reset link sent to \(trimmed)"
-        showAlert = true
+        authVM.sendPasswordReset(to: trimmed) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    self.isForgotPasswordActive = false
+                    self.alertMessage = "Password reset link sent to \(trimmed)"
+                    self.showAlert = true
+                case .failure(let error):
+                    // Map FirebaseAuth error to a user-friendly message
+                    self.forgotError = friendlyAuthErrorMessage(error)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Friendlier error messages for common Firebase Auth errors
+    private func friendlyAuthErrorMessage(_ error: Error) -> String {
+        if let err = error as NSError?,
+           let code = AuthErrorCode(rawValue: err.code) {
+            switch code {
+            case .userNotFound:
+                return "We couldn't find an account with that email."
+            case .invalidEmail:
+                return "That email address doesn't look valid."
+            case .invalidRecipientEmail, .invalidSender, .invalidMessagePayload:
+                return "We couldn't send the reset email. Please try again later."
+            case .networkError:
+                return "Network error. Please check your connection and try again."
+            case .tooManyRequests:
+                return "Too many attempts. Please wait a bit and try again."
+            default:
+                break
+            }
+        }
+        return error.localizedDescription
     }
 }
 

@@ -94,6 +94,7 @@ struct UserProfile: Identifiable, Codable {
     }
 }
 
+@MainActor
 class AuthViewModel: ObservableObject {
     @Published var user: User? = nil
     @Published var isSignedIn: Bool = false
@@ -121,12 +122,16 @@ class AuthViewModel: ObservableObject {
         lastErrorMessage = nil
         Auth.auth().createUser(withEmail: email, password: password) { result, error in
             if let error = error {
-                self.lastErrorMessage = error.localizedDescription
+                Task { @MainActor in
+                    self.lastErrorMessage = error.localizedDescription
+                }
                 print("Sign Up Error: \(error.localizedDescription)")
                 return
             }
-            self.user = result?.user
-            self.isRegistered = true
+            Task { @MainActor in
+                self.user = result?.user
+                self.isRegistered = true
+            }
         }
     }
 
@@ -144,7 +149,9 @@ class AuthViewModel: ObservableObject {
         lastErrorMessage = nil
         Auth.auth().createUser(withEmail: email, password: password) { result, error in
             if let error = error {
-                self.lastErrorMessage = error.localizedDescription
+                Task { @MainActor in
+                    self.lastErrorMessage = error.localizedDescription
+                }
                 print("Sign Up Error: \(error.localizedDescription)")
                 completion(.failure(error))
                 return
@@ -152,14 +159,18 @@ class AuthViewModel: ObservableObject {
 
             guard let uid = result?.user.uid else {
                 let err = NSError(domain: "AuthViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Missing user id"])
-                self.lastErrorMessage = err.localizedDescription
+                Task { @MainActor in
+                    self.lastErrorMessage = err.localizedDescription
+                }
                 print("Auth user missing uid after createUser")
                 completion(.failure(err))
                 return
             }
 
-            self.user = result?.user
-            self.isRegistered = true
+            Task { @MainActor in
+                self.user = result?.user
+                self.isRegistered = true
+            }
 
             // Build profile payload
             let payload: [String: Any] = [
@@ -182,56 +193,62 @@ class AuthViewModel: ObservableObject {
             // Write to users/{uid}
             self.db.collection("users").document(uid).setData(payload, merge: false) { err in
                 if let err = err {
-                    self.lastErrorMessage = err.localizedDescription
+                    Task { @MainActor in
+                        self.lastErrorMessage = err.localizedDescription
+                    }
                     print("Firestore Write Error: \(err.localizedDescription)")
                     completion(.failure(err))
                     return
                 }
                 print("Firestore Write Success for uid: \(uid)")
 
-                // Optimistically populate userProfile locally
-                let countryModel = UserProfile.Country(
-                    isoCode: country.isoCode,
-                    name: country.name,
-                    dialCode: country.dialCode,
-                    currencyName: country.currencyName
-                )
-                self.userProfile = UserProfile(
-                    uid: uid,
-                    email: email,
-                    firstName: firstName,
-                    lastName: lastName,
-                    mobile: mobileDigitsOnly,
-                    country: countryModel,
-                    currency: currency,
-                    createdAt: nil,
-                    updatedAt: nil
-                )
+                Task { @MainActor in
+                    // Optimistically populate userProfile locally
+                    let countryModel = UserProfile.Country(
+                        isoCode: country.isoCode,
+                        name: country.name,
+                        dialCode: country.dialCode,
+                        currencyName: country.currencyName
+                    )
+                    self.userProfile = UserProfile(
+                        uid: uid,
+                        email: email,
+                        firstName: firstName,
+                        lastName: lastName,
+                        mobile: mobileDigitsOnly,
+                        country: countryModel,
+                        currency: currency,
+                        createdAt: nil,
+                        updatedAt: nil
+                    )
 
-                // Also start listening to the document for live updates
-                self.getUserDetails(for: uid)
-
-                completion(.success(()))
-                if let uid = result?.user.uid {
+                    // Also start listening to the document for live updates
                     self.getUserDetails(for: uid)
                 }
+
+                completion(.success(()))
             }
         }
     }
 
-    func signIn(email: String, password: String) {
+    func signIn(email: String, password: String, completion: @escaping(_ isSignIn: Bool) -> Void) {
         lastErrorMessage = nil
         Auth.auth().signIn(withEmail: email, password: password) { result, error in
             if let error = error {
-                self.lastErrorMessage = error.localizedDescription
+                Task { @MainActor in
+                    self.lastErrorMessage = error.localizedDescription
+                }
                 print("Sign In Error: \(error.localizedDescription)")
+                completion(false)
                 return
             }
-            self.user = result?.user
-            self.isSignedIn = true
-
-            if let uid = result?.user.uid {
-                self.getUserDetails(for: uid)
+            Task { @MainActor in
+                self.user = result?.user
+                self.isSignedIn = true
+                completion(true)
+                if let uid = result?.user.uid {
+                    self.getUserDetails(for: uid)
+                }
             }
         }
     }
@@ -250,6 +267,23 @@ class AuthViewModel: ObservableObject {
         } catch {
             lastErrorMessage = error.localizedDescription
             print("Sign Out Error: \(error.localizedDescription)")
+        }
+    }
+
+    // MARK: - Password Reset
+    func sendPasswordReset(to email: String, completion: @escaping (Result<Void, Error>) -> Void) {
+        lastErrorMessage = nil
+        Auth.auth().sendPasswordReset(withEmail: email) { error in
+            if let error = error {
+                Task { @MainActor in
+                    self.lastErrorMessage = error.localizedDescription
+                }
+                print("Password Reset Error: \(error.localizedDescription)")
+                completion(.failure(error))
+            } else {
+                print("Password reset email sent to \(email)")
+                completion(.success(()))
+            }
         }
     }
 
@@ -273,18 +307,26 @@ class AuthViewModel: ObservableObject {
         listener?.remove()
         listener = db.collection("users").document(uid).addSnapshotListener { snapshot, error in
             if let error = error {
-                self.lastErrorMessage = error.localizedDescription
+                Task { @MainActor in
+                    self.lastErrorMessage = error.localizedDescription
+                }
                 print("Fetch Profile Error: \(error.localizedDescription)")
                 return
             }
             guard let snapshot = snapshot, let data = snapshot.data() else {
-                self.userProfile = nil
+                Task { @MainActor in
+                    self.userProfile = nil
+                }
                 return
             }
             if let profile = UserProfile(uid: uid, dict: data) {
-                self.userProfile = profile
+                Task { @MainActor in
+                    self.userProfile = profile
+                }
             } else {
-                self.lastErrorMessage = "Failed to parse user profile"
+                Task { @MainActor in
+                    self.lastErrorMessage = "Failed to parse user profile"
+                }
                 print("Failed to parse user profile for uid: \(uid)")
             }
         }
