@@ -126,6 +126,7 @@ class FirestoreManager {
                 let id = document["id"]
                 let paymentType = document["paymentType"]
                 let userId = document["userId"]
+                let note = document["note"]
                 var created: Date? = nil
                 var date: Date? = nil
                 var updated: Date? = nil
@@ -147,6 +148,7 @@ class FirestoreManager {
                         createdAt: created,
                         date: date,
                         id: id as? String ?? "",
+                        note: note as? String ?? "",
                         paymentType: paymentType as? String ?? "",
                         updatedAt: updated,
                         userId: userId as? String ?? "")
@@ -179,6 +181,7 @@ class FirestoreManager {
                 let id = document["id"]
                 let paymentType = document["paymentType"]
                 let userId = document["userId"]
+                let note = document["note"]
                 var created: Date? = nil
                 var date: Date? = nil
                 var updated: Date? = nil
@@ -200,6 +203,7 @@ class FirestoreManager {
                         createdAt: created,
                         date: date,
                         id: id as? String ?? "",
+                        note: note as? String ?? "",
                         paymentType: paymentType as? String ?? "",
                         updatedAt: updated,
                         userId: userId as? String ?? "")

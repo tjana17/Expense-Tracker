@@ -18,17 +18,39 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
 @main
 struct Expense_TrackerApp: App {
-    // register app delegate for Firebase setup
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @StateObject private var authVM = AuthViewModel()
+    @StateObject private var biometricManager = BiometricLockManager()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
-            NavigationStack {
-                ContentView()
-                    .preferredColorScheme(.dark)
+            ZStack {
+                NavigationStack {
+                    ContentView()
+                        .preferredColorScheme(.dark)
+                }
+                .environmentObject(authVM)
+                .environmentObject(biometricManager)
+
+                // Overlay lock screen when locked
+                if biometricManager.isLocked {
+                    BiometricLockView()
+                        .environmentObject(biometricManager)
+                        .transition(.opacity)
+                        .zIndex(1)
+                }
             }
-            .environmentObject(authVM)
+            .animation(.easeInOut(duration: 0.25), value: biometricManager.isLocked)
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .background {
+                    biometricManager.lockIfEnabled()
+                }
+            }
+            .onAppear {
+                // Lock on cold launch if enabled
+                biometricManager.lockIfEnabled()
+            }
         }
     }
 }

@@ -27,6 +27,7 @@ struct AddExpenseView: View {
     @State private var showConfirmSheet: Bool = false
 
     @State private var selectedPaymentType: PaymentType = .cash
+    @State private var noteText: String = ""
 
     // Toast state
     @State private var showToast: Bool = false
@@ -82,6 +83,13 @@ struct AddExpenseView: View {
                     .foregroundColor(.white)
 
                 datePicker
+
+                // Note Field
+                Text("Note (optional)")
+                    .font(.system(size: 20).weight(.bold))
+                    .foregroundColor(.white)
+
+                noteField
 
                 // Save Expense triggers confirmation sheet first
                 Button {
@@ -287,6 +295,35 @@ struct AddExpenseView: View {
         }
     }
 
+    // MARK: - Note Field
+    private var noteField: some View {
+        HStack(spacing: 8) {
+            TextField("e.g. Lunch with team", text: $noteText)
+                .textInputAutocapitalization(.sentences)
+                .foregroundColor(.primary)
+                .font(.system(size: 18))
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+        .frame(height: 60)
+        .background(Color(.secondarySystemBackground))
+        .cornerRadius(10)
+        .overlay(
+            HStack {
+                Spacer()
+                if !noteText.isEmpty {
+                    Button { noteText = "" } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.trailing, 10)
+                    .accessibilityLabel("Clear note")
+                }
+            }
+        )
+    }
+
     // MARK: - Confirmation Sheet
     private var confirmationSheet: some View {
         VStack(spacing: 16) {
@@ -339,6 +376,19 @@ struct AddExpenseView: View {
                             .font(.body.bold())
                     }
                 )
+
+                if !noteText.trimmingCharacters(in: .whitespaces).isEmpty {
+                    confirmItem(
+                        icon: "note.text",
+                        title: "Note",
+                        value: {
+                            Text(noteText)
+                                .foregroundColor(.white)
+                                .font(.body.bold())
+                                .lineLimit(2)
+                        }
+                    )
+                }
             }
             .padding(12)
             .background(Color.white.opacity(0.06))
@@ -406,10 +456,12 @@ struct AddExpenseView: View {
                 categoryIcon: category.iconName,
                 amount: amount,
                 paymentType: selectedPaymentType.rawValue,
-                date: selectedDate
+                date: selectedDate,
+                note: noteText
             )
             print("Expense saved.")
             amountText = ""
+            noteText = ""
             selectedDate = Date()
             selectedPaymentType = .cash
 

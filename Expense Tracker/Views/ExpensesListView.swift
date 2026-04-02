@@ -295,6 +295,7 @@ private struct ExpenseEditSheet: View {
                             createdAt: expense.createdAt,
                             date: date,
                             id: expense.id,
+                            note: expense.note,
                             paymentType: paymentType,
                             updatedAt: Date(),
                             userId: expense.userId

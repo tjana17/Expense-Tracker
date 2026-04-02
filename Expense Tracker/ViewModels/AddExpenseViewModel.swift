@@ -23,11 +23,12 @@ final class AddExpenseViewModel: ObservableObject {
         categoryIcon: String,
         amount: Double,
         paymentType: String,
-        date: Date
+        date: Date,
+        note: String = ""
     ) async throws {
         let expenseId = UUID().uuidString
 
-        let payload: [String: Any] = [
+        var payload: [String: Any] = [
             "id": expenseId,
             "userId": userId,
             "categoryId": categoryId.uuidString,
@@ -39,6 +40,9 @@ final class AddExpenseViewModel: ObservableObject {
             "createdAt": FieldValue.serverTimestamp(),
             "updatedAt": FieldValue.serverTimestamp()
         ]
+        if !note.trimmingCharacters(in: .whitespaces).isEmpty {
+            payload["note"] = note
+        }
 
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             db.collection("expenses")

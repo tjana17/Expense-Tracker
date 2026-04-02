@@ -270,6 +270,70 @@ class AuthViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Update Profile
+    func updateProfile(
+        firstName: String,
+        lastName: String,
+        mobile: String,
+        currency: String,
+        country: CountryData
+    ) async throws {
+        guard let uid = user?.uid else {
+            throw NSError(domain: "AuthViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "No authenticated user"])
+        }
+        let payload: [String: Any] = [
+            "firstName": firstName,
+            "lastName": lastName,
+            "mobile": mobile,
+            "currency": currency,
+            "country": [
+                "isoCode": country.isoCode,
+                "name": country.name,
+                "dialCode": country.dialCode,
+                "currencyName": country.currencyName
+            ],
+            "updatedAt": FieldValue.serverTimestamp()
+        ]
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            self.db.collection("users").document(uid).updateData(payload) { error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
+    }
+
+    // MARK: - Change Password (requires re-authentication)
+    func changePassword(currentPassword: String, newPassword: String) async throws {
+        guard let firebaseUser = Auth.auth().currentUser,
+              let email = firebaseUser.email else {
+            throw NSError(domain: "AuthViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "No authenticated user"])
+        }
+        let credential = EmailAuthProvider.credential(withEmail: email, password: currentPassword)
+        // Re-authenticate
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            firebaseUser.reauthenticate(with: credential) { _, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
+        // Update password
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            firebaseUser.updatePassword(to: newPassword) { error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
+    }
+
     // MARK: - Password Reset
     func sendPasswordReset(to email: String, completion: @escaping (Result<Void, Error>) -> Void) {
         lastErrorMessage = nil

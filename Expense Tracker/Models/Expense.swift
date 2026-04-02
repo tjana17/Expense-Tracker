@@ -57,6 +57,7 @@ struct Expenses: Identifiable, Codable {
     let createdAt: Date?
     let date: Date?
     let id: String
+    let note: String?
     let paymentType: String
     let updatedAt: Date?
     let userId: String

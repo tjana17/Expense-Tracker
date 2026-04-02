@@ -307,16 +307,26 @@ extension ExpenseHomeView {
 
                 Spacer()
 
-                Text("Show All")
-                    .foregroundColor(.white.opacity(0.6))
-                    .onTapGesture {
-                        showExpenseList = true
-                    }
+                if let expenses = expenseVM.currentExpenseRecords, !expenses.isEmpty {
+                    Text("Show All")
+                        .foregroundColor(.white.opacity(0.6))
+                        .onTapGesture { showExpenseList = true }
+                }
             }
 
-            VStack(spacing: 15) {
-                let currencySymbol = Currency.symbol(from: authVM.userProfile?.currency ?? "USD - US Dollar")
-                if let expenses = expenseVM.currentExpenseRecords, !expenses.isEmpty {
+            if expenseVM.isLoading {
+                // Show placeholder rows while fetching
+                VStack(spacing: 15) {
+                    ForEach(0..<3, id: \.self) { _ in
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.white.opacity(0.06))
+                            .frame(height: 64)
+                            .modifier(Shimmer())
+                    }
+                }
+            } else if let expenses = expenseVM.currentExpenseRecords, !expenses.isEmpty {
+                VStack(spacing: 15) {
+                    let currencySymbol = Currency.symbol(from: authVM.userProfile?.currency ?? "USD - US Dollar")
                     ForEach(Array(expenses.suffix(3)).reversed()) { expense in
                         TransactionRowView(
                             systemIconName: expense.categoryIcon.isEmpty ? "circle" : expense.categoryIcon,
@@ -329,7 +339,52 @@ extension ExpenseHomeView {
                         )
                     }
                 }
+            } else {
+                expenseEmptyState
             }
         }
+    }
+
+    private var expenseEmptyState: some View {
+        VStack(spacing: 20) {
+            ZStack {
+                Circle()
+                    .fill(Color.white.opacity(0.06))
+                    .frame(width: 90, height: 90)
+                Image(systemName: "tray")
+                    .font(.system(size: 36))
+                    .foregroundColor(.white.opacity(0.4))
+            }
+
+            VStack(spacing: 6) {
+                Text("No expenses yet")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                Text("Start tracking by adding your first expense.\nYour spending summary will appear here.")
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.5))
+                    .multilineTextAlignment(.center)
+            }
+
+            Button {
+                selectedTab = 10
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus.circle.fill")
+                    Text("Add First Expense")
+                        .bold()
+                }
+                .padding(.horizontal, 28)
+                .padding(.vertical, 13)
+                .background(Color.blue)
+                .foregroundColor(.white)
+                .clipShape(Capsule())
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 30)
+        .padding(.horizontal, 12)
+        .background(Color.white.opacity(0.04))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 }
